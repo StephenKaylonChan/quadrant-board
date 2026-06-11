@@ -21,28 +21,48 @@ const SYNC_GROUPS: { status: TaskStatus; title: string; summary: string }[] = [
   { status: 'done', title: '今日已归档', summary: '今日已归档' },
 ]
 
+const STATUS_SYNC_ICON: Record<TaskStatus, string> = {
+  todo: '○',
+  doing: '▶',
+  review: '↗',
+  verify: '◇',
+  done: '✓',
+}
+
 function loadTheme(): ThemeMode {
   const saved = localStorage.getItem(THEME_KEY)
   return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system'
 }
 
-function formatSyncTask(task: Task): string {
-  const due = task.due_date ? `（截止 ${task.due_date.slice(5)}）` : ''
-  return `- ${task.title}${due}`
+function firstDescLine(task: Task): string {
+  return task.description
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean) ?? ''
 }
 
-function buildDailySync(tasks: Task[]): string {
+function formatSyncTask(task: Task, today: string): string[] {
+  const due = task.due_date
+    ? task.due_date < today
+      ? `（已过期 ${task.due_date.slice(5)}）`
+      : `（截止 ${task.due_date.slice(5)}）`
+    : ''
+  const desc = firstDescLine(task)
+  return desc ? [`- ${task.title}${due}`, `  备注：${desc}`] : [`- ${task.title}${due}`]
+}
+
+function buildDailySync(tasks: Task[], today: string, weekday: string): string {
   const byStatus = (status: TaskStatus) => tasks.filter((t) => t.status === status)
-  const lines: string[] = ['今日待办同步：', '', '总体：']
+  const lines: string[] = [`今日待办同步（${today} 周${weekday}）：`, '', '总体：']
 
   for (const group of SYNC_GROUPS) {
-    lines.push(`- ${group.summary}：${byStatus(group.status).length} 个`)
+    lines.push(`- ${STATUS_SYNC_ICON[group.status]} ${group.summary}：${byStatus(group.status).length} 个`)
   }
 
   SYNC_GROUPS.forEach((group, index) => {
     const list = byStatus(group.status)
-    lines.push('', `${index + 1}. ${group.title}`)
-    lines.push(...(list.length > 0 ? list.map(formatSyncTask) : ['- 暂无']))
+    lines.push('', `${index + 1}. ${STATUS_SYNC_ICON[group.status]} ${group.title}`)
+    lines.push(...(list.length > 0 ? list.flatMap((task) => formatSyncTask(task, today)) : ['- 暂无']))
   })
 
   return lines.join('\n')
@@ -179,14 +199,16 @@ export default function App() {
           disabled={!isToday}
           title={isToday ? '' : '历史面板只能查看,回到今天再新建'}
         >
-          + 新任务
+          <span className="btn-icon" aria-hidden="true">＋</span>
+          新任务
         </button>
         <button
           className="ghost-btn"
-          onClick={() => setSyncDraft(buildDailySync(tasks))}
+          onClick={() => setSyncDraft(buildDailySync(tasks, today, weekday))}
           disabled={!isToday}
           title={isToday ? '' : '历史面板不生成今日同步'}
         >
+          <span className="btn-icon" aria-hidden="true">↗</span>
           今日同步
         </button>
       </header>

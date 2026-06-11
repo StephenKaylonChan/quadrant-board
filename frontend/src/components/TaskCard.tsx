@@ -25,6 +25,14 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   done: '已完成',
 }
 
+const STATUS_ICON: Record<TaskStatus, string> = {
+  todo: '○',
+  doing: '▶',
+  review: '↗',
+  verify: '◇',
+  done: '✓',
+}
+
 // 卡片上最多直接展示几张缩略图,多出来的显示 +N
 const MAX_THUMBS = 4
 
@@ -81,7 +89,10 @@ export default function TaskCard({
       <div className="card-top">
         <span className="card-top-left">
           <span className="card-index">{index}</span>
-          <span className={`chip chip-${task.status}`}>{STATUS_LABEL[task.status]}</span>
+          <span className={`chip chip-${task.status}`}>
+            <span className="chip-icon" aria-hidden="true">{STATUS_ICON[task.status]}</span>
+            {STATUS_LABEL[task.status]}
+          </span>
         </span>
         <span className="card-top-right">
           {due && (
