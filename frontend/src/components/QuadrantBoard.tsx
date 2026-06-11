@@ -4,6 +4,8 @@ import { STATUS_META } from '../statusMeta'
 import type { Task } from '../types'
 import TaskCard from './TaskCard'
 
+export type BoardView = 'current' | 'review' | 'archive'
+
 // 拖拽落点要改的字段:新顺序 + 目标象限对应的重要性/截止日期
 export interface MovePatch {
   sort_order: number
@@ -13,6 +15,7 @@ export interface MovePatch {
 
 interface Props {
   tasks: Task[]
+  viewMode: BoardView
   onSelect: (task: Task) => void
   onDelete: (task: Task) => void
   onMove: (task: Task, patch: MovePatch) => void
@@ -27,9 +30,9 @@ interface QuadrantDef {
 }
 
 interface QuadrantTasks {
-  active: Task[]
+  current: Task[]
   review: Task[]
-  done: Task[]
+  archive: Task[]
 }
 
 // 两个维度:重要吗(上下)× 有没有截止日期(左右)
@@ -57,22 +60,25 @@ function sortActive(list: Task[], q: QuadrantDef): Task[] {
   })
 }
 
-export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Props) {
+const VIEW_COUNT_LABEL: Record<BoardView, string> = {
+  current: '当前',
+  review: '待 Review',
+  archive: '归档',
+}
+
+export default function QuadrantBoard({ tasks, viewMode, onSelect, onDelete, onMove }: Props) {
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [overQuad, setOverQuad] = useState<string | null>(null)
-  // 各象限"已完成"折叠区的开合状态
-  const [openArchive, setOpenArchive] = useState<Record<string, boolean>>({})
-  // 待 Review 是"等别人"的等待区,默认不占主列表视线
-  const [openReview, setOpenReview] = useState<Record<string, boolean>>({})
+  const canDrag = viewMode === 'current'
 
   const groupedTasks = useMemo(() => {
     const result: Record<string, QuadrantTasks> = {}
     for (const q of QUADRANTS) {
       const all = tasks.filter((t) => inQuadrant(t, q))
       result[q.key] = {
-        active: sortActive(all.filter((t) => t.status !== 'done' && t.status !== 'review'), q),
+        current: sortActive(all.filter((t) => t.status !== 'done' && t.status !== 'review'), q),
         review: sortActive(all.filter((t) => t.status === 'review'), q),
-        done: all.filter((t) => t.status === 'done'),
+        archive: sortActive(all.filter((t) => t.status === 'done'), q),
       }
     }
     return result
@@ -120,16 +126,14 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
       <span className="axis axis-x">时限压力 →</span>
 
       {QUADRANTS.map((q) => {
-        const { active, review, done } = groupedTasks[q.key]
-        const reviewOpen = openReview[q.key] ?? false
-        const archiveOpen = openArchive[q.key] ?? false
+        const visible = groupedTasks[q.key][viewMode]
 
         return (
           <section
             key={q.key}
             className={`quadrant q-${q.key}${overQuad === q.key ? ' drag-over' : ''}`}
             onDragOver={(e) => {
-              if (draggingId !== null) {
+              if (canDrag && draggingId !== null) {
                 e.preventDefault() // 默认是"禁止放下",阻止掉才能触发 onDrop
                 setOverQuad(q.key)
               }
@@ -140,49 +144,32 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
               }
             }}
             onDrop={(e) => {
+              if (!canDrag) return
               e.preventDefault()
               setOverQuad(null)
-              dropAt(q, active, active.length) // 落在象限空白处 = 排到末尾
+              dropAt(q, visible, visible.length) // 落在象限空白处 = 排到末尾
             }}
           >
             <header className="q-head">
               <h2>{q.title}</h2>
               <span className="q-hint">{q.hint}</span>
               <span className="q-tools">
-                <span className="q-count">当前 {active.length}</span>
-                {review.length > 0 && (
-                  <button
-                    type="button"
-                    className="q-archive-toggle q-review-toggle"
-                    onClick={() => setOpenReview((p) => ({ ...p, [q.key]: !reviewOpen }))}
-                  >
-                    <span>待 Review {review.length}</span>
-                    <span className="archive-chevron">{reviewOpen ? '▾' : '▸'}</span>
-                  </button>
-                )}
-                {done.length > 0 && (
-                  <button
-                    type="button"
-                    className="q-archive-toggle"
-                    onClick={() => setOpenArchive((p) => ({ ...p, [q.key]: !archiveOpen }))}
-                  >
-                    <span>归档 {done.length}</span>
-                    <span className="archive-chevron">{archiveOpen ? '▾' : '▸'}</span>
-                  </button>
-                )}
+                <span className="q-count">{VIEW_COUNT_LABEL[viewMode]} {visible.length}</span>
               </span>
             </header>
 
             <div className="q-list">
-              {active.length === 0 && review.length === 0 && done.length === 0 ? (
+              {visible.length === 0 ? (
                 <p className="q-empty">空着挺好</p>
               ) : (
-                active.map((t, i) => (
+                visible.map((t, i) => (
                   <TaskCard
                     key={t.id}
                     task={t}
                     index={i + 1}
                     dragging={t.id === draggingId}
+                    draggable={canDrag}
+                    allowDelete={canDrag}
                     onClick={() => onSelect(t)}
                     onDelete={() => onDelete(t)}
                     onDragStart={() => setDraggingId(t.id)}
@@ -191,42 +178,15 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
                       setOverQuad(null)
                     }}
                     onDropOnCard={(after) => {
+                      if (!canDrag) return
                       setOverQuad(null)
-                      dropOnCard(q, active, t, after)
+                      dropOnCard(q, visible, t, after)
                     }}
                   />
                 ))
               )}
-              {draggingId !== null && <div className="drop-tail" aria-hidden="true">放到末尾</div>}
+              {canDrag && draggingId !== null && <div className="drop-tail" aria-hidden="true">放到末尾</div>}
             </div>
-
-            {review.length > 0 && reviewOpen && (
-              <div className="archive review-box archive-open">
-                <ul className="archive-list review-list">
-                  {review.map((t) => (
-                    <li key={t.id}>
-                      <button type="button" onClick={() => onSelect(t)}>
-                        {t.title}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {done.length > 0 && archiveOpen && (
-              <div className="archive archive-open">
-                <ul className="archive-list">
-                  {done.map((t) => (
-                    <li key={t.id}>
-                      <button type="button" onClick={() => onSelect(t)}>
-                        {t.title}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </section>
         )
       })}

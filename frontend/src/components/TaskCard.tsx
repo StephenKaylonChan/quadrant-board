@@ -10,6 +10,8 @@ interface Props {
   task: Task
   index: number // 在象限内的位置序号(从 1 开始,跟着拖拽顺序变)
   dragging: boolean
+  draggable?: boolean
+  allowDelete?: boolean
   onClick: () => void
   onDelete: () => void // 点卡片上的 ×,由 App 弹二次确认
   onDragStart: () => void
@@ -22,6 +24,8 @@ export default function TaskCard({
   task,
   index,
   dragging,
+  draggable = true,
+  allowDelete = true,
   onClick,
   onDelete,
   onDragStart,
@@ -58,32 +62,36 @@ export default function TaskCard({
 
   const due = dueLabel(task.due_date)
   const statusMeta = STATUS_META[task.status]
-  const dropClass = dropSide === null || dragging ? '' : ` card-drop-${dropSide}`
+  const dropClass = dropSide === null || dragging || !draggable ? '' : ` card-drop-${dropSide}`
   const overdueClass = due?.overdue ? ' card-overdue' : ''
 
   return (
     <article
-      className={`card card-${task.status}${overdueClass}${dragging ? ' card-dragging' : ''}${dropClass}`}
-      draggable
+      className={`card card-${task.status}${overdueClass}${dragging ? ' card-dragging' : ''}${!draggable ? ' card-static' : ''}${dropClass}`}
+      draggable={draggable}
       onClick={onClick}
       onDragStart={(e) => {
+        if (!draggable) return
         e.dataTransfer.effectAllowed = 'move'
         onDragStart()
       }}
       onDragEnd={() => {
+        if (!draggable) return
         setDropSide(null)
         onDragEnd()
       }}
       onDragOver={(e) => {
+        if (!draggable) return
         e.preventDefault()
         if (!dragging) setDropSide(dropAfter(e) ? 'after' : 'before')
       }}
       onDragLeave={(e) => {
+        if (!draggable) return
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
           setDropSide(null)
         }
       }}
-      onDrop={handleDrop}
+      onDrop={draggable ? handleDrop : undefined}
     >
       <div className="card-top">
         <span className="card-top-left">
@@ -97,18 +105,20 @@ export default function TaskCard({
           {due && (
             <span className={`chip ${due.overdue ? 'chip-overdue' : 'chip-due'}`}>{due.text}</span>
           )}
-          <button
-            type="button"
-            className="card-x"
-            title="删除任务"
-            aria-label="删除任务"
-            onClick={(e) => {
-              e.stopPropagation() // 别触发卡片的"打开编辑"
-              onDelete()
-            }}
-          >
-            ×
-          </button>
+          {allowDelete && (
+            <button
+              type="button"
+              className="card-x"
+              title="删除任务"
+              aria-label="删除任务"
+              onClick={(e) => {
+                e.stopPropagation() // 别触发卡片的"打开编辑"
+                onDelete()
+              }}
+            >
+              ×
+            </button>
+          )}
         </span>
       </div>
       <h3 className="card-title">{task.title}</h3>

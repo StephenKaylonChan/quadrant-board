@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { aiStatus, deleteTask, fetchTasks, updateTask } from './api'
 import type { TaskDraft } from './api'
 import AiQuickAdd from './components/AiQuickAdd'
-import QuadrantBoard, { type MovePatch } from './components/QuadrantBoard'
+import QuadrantBoard, { type BoardView, type MovePatch } from './components/QuadrantBoard'
 import TaskEditor from './components/TaskEditor'
 import { addDays, todayStr } from './dates'
 import { useDocumentEvent } from './hooks/useDocumentEvent'
@@ -14,6 +14,11 @@ const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 type ThemeMode = 'light' | 'dark' | 'system'
 const THEME_LABEL: Record<ThemeMode, string> = { light: '浅色', dark: '深色', system: '系统' }
 const THEME_KEY = 'qb-theme'
+const BOARD_VIEW_LABEL: Record<BoardView, string> = {
+  current: '当前',
+  review: '待 Review',
+  archive: '归档',
+}
 
 function loadTheme(): ThemeMode {
   const saved = localStorage.getItem(THEME_KEY)
@@ -72,6 +77,7 @@ export default function App() {
   const [deleting, setDeleting] = useState<Task | null>(null)
   const [syncDraft, setSyncDraft] = useState('')
   const [syncCopied, setSyncCopied] = useState(false)
+  const [boardView, setBoardView] = useState<BoardView>('current')
 
   // 后端配了大模型密钥才显示 AI 输入框
   useEffect(() => {
@@ -170,6 +176,11 @@ export default function App() {
 
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]
+  const boardViewCounts: Record<BoardView, number> = {
+    current: tasks.filter((t) => t.status !== 'done' && t.status !== 'review').length,
+    review: tasks.filter((t) => t.status === 'review').length,
+    archive: tasks.filter((t) => t.status === 'done').length,
+  }
 
   return (
     <div className="app">
@@ -201,6 +212,19 @@ export default function App() {
           {(['light', 'dark', 'system'] as const).map((m) => (
             <button key={m} type="button" className={theme === m ? 'on' : ''} onClick={() => setTheme(m)}>
               {THEME_LABEL[m]}
+            </button>
+          ))}
+        </div>
+
+        <div className="seg seg-sm board-view-switch" role="group" aria-label="任务视图切换">
+          {(['current', 'review', 'archive'] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              className={boardView === view ? 'on' : ''}
+              onClick={() => setBoardView(view)}
+            >
+              {BOARD_VIEW_LABEL[view]} {boardViewCounts[view]}
             </button>
           ))}
         </div>
@@ -246,6 +270,7 @@ export default function App() {
 
       <QuadrantBoard
         tasks={tasks}
+        viewMode={boardView}
         onSelect={(t) => setEditor(t)}
         onDelete={(t) => setDeleting(t)}
         onMove={moveTask}
