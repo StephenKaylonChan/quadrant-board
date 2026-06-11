@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { copyImageToClipboard } from '../clipboard'
+import { useDocumentEvent } from '../hooks/useDocumentEvent'
 
 interface Props {
   url: string
@@ -11,13 +12,9 @@ interface Props {
 export default function Lightbox({ url, onClose }: Props) {
   const [toast, setToast] = useState('')
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  useDocumentEvent('keydown', (e) => {
+    if (e.key === 'Escape') onClose()
+  })
 
   async function handleContextMenu(e: ReactMouseEvent) {
     e.preventDefault() // 拦掉浏览器默认右键菜单,改成"右键即复制"

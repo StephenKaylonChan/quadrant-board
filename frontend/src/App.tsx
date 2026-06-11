@@ -5,6 +5,7 @@ import AiQuickAdd from './components/AiQuickAdd'
 import QuadrantBoard, { type MovePatch } from './components/QuadrantBoard'
 import TaskEditor from './components/TaskEditor'
 import { addDays, todayStr } from './dates'
+import { useDocumentEvent } from './hooks/useDocumentEvent'
 import { STATUS_META, SYNC_STATUS_ORDER } from './statusMeta'
 import type { Task, TaskStatus } from './types'
 
@@ -143,33 +144,29 @@ export default function App() {
     }
   }
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (deleting) {
-        if (e.key === 'Escape') {
-          e.preventDefault()
-          setDeleting(null)
-        }
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          void confirmDelete()
-        }
-        return
+  useDocumentEvent('keydown', (e) => {
+    if (deleting) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setDeleting(null)
       }
-      if (syncDraft) {
-        if (e.key === 'Escape') {
-          e.preventDefault()
-          setSyncDraft('')
-        }
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault()
-          void copySyncDraft()
-        }
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        void confirmDelete()
+      }
+      return
+    }
+    if (syncDraft) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setSyncDraft('')
+      }
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        void copySyncDraft()
       }
     }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [deleting, syncDraft])
+  }, deleting !== null || syncDraft !== '')
 
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]

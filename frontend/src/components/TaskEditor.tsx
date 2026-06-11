@@ -9,6 +9,7 @@ import {
 } from '../api'
 import type { TaskDraft } from '../api'
 import { addDays, todayStr } from '../dates'
+import { useDocumentEvent } from '../hooks/useDocumentEvent'
 import { EDITOR_STATUS_ORDER, STATUS_META } from '../statusMeta'
 import type { Task, TaskImage, TaskStatus } from '../types'
 import Lightbox from './Lightbox'
@@ -100,16 +101,12 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
   }
 
   // 监听整个页面的粘贴事件:弹窗开着时按 Ctrl/Cmd+V 就能贴图
-  useEffect(() => {
-    function onPaste(e: ClipboardEvent) {
-      const files = Array.from(e.clipboardData?.files ?? [])
-      if (files.length > 0) {
-        e.preventDefault() // 是图片才拦截;纯文字照常粘贴进输入框
-        void addFiles(files)
-      }
+  useDocumentEvent('paste', (e) => {
+    const files = Array.from(e.clipboardData?.files ?? [])
+    if (files.length > 0) {
+      e.preventDefault() // 是图片才拦截;纯文字照常粘贴进输入框
+      void addFiles(files)
     }
-    document.addEventListener('paste', onPaste)
-    return () => document.removeEventListener('paste', onPaste)
   })
 
   // 把快捷选择换算成具体日期(或 null = 无期限)
@@ -203,44 +200,40 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
     else onClose()
   }
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (lightbox) return
-      if (confirmDelete) {
-        if (e.key === 'Escape') {
-          e.preventDefault()
-          setConfirmDelete(false)
-        }
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          setConfirmDelete(false)
-          void handleDelete()
-        }
-        return
-      }
-      if (confirmClose) {
-        if (e.key === 'Escape') {
-          e.preventDefault()
-          setConfirmClose(false)
-        }
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          setConfirmClose(false)
-          void handleSubmit()
-        }
-        return
-      }
+  useDocumentEvent('keydown', (e) => {
+    if (lightbox) return
+    if (confirmDelete) {
       if (e.key === 'Escape') {
         e.preventDefault()
-        attemptClose()
+        setConfirmDelete(false)
       }
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      if (e.key === 'Enter') {
         e.preventDefault()
+        setConfirmDelete(false)
+        void handleDelete()
+      }
+      return
+    }
+    if (confirmClose) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setConfirmClose(false)
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        setConfirmClose(false)
         void handleSubmit()
       }
+      return
     }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      attemptClose()
+    }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      void handleSubmit()
+    }
   })
 
   return (
