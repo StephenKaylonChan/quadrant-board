@@ -43,19 +43,15 @@ function inQuadrant(t: Task, q: QuadrantDef): boolean {
   return t.important === q.important && (t.due_date !== null) === q.hasDue
 }
 
-// 优先级分层:已过期 > 进行中 > 待验证 > 待办 > 待 Review;
-// 同一层内截止越近越靠前,再相同才看手动拖拽顺序
-function sortActive(list: Task[], q: QuadrantDef, today: string): Task[] {
-  // 已过期单独算第 0 层,压过所有状态
-  const tier = (t: Task) =>
-    q.hasDue && t.due_date !== null && t.due_date < today ? 0 : STATUS_META[t.status].activeRank
-
+// 有期限象限:截止日期越近越靠前,同一天再按状态和拖拽顺序。
+// 无期限象限:没有日期压力,所以先按状态,再按拖拽顺序。
+function sortActive(list: Task[], q: QuadrantDef): Task[] {
   return [...list].sort((a, b) => {
-    const byTier = tier(a) - tier(b)
-    if (byTier !== 0) return byTier
     if (q.hasDue && a.due_date !== b.due_date) {
       return a.due_date! < b.due_date! ? -1 : 1
     }
+    const byStatus = STATUS_META[a.status].activeRank - STATUS_META[b.status].activeRank
+    if (byStatus !== 0) return byStatus
     return a.sort_order - b.sort_order
   })
 }
@@ -65,19 +61,18 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
   const [overQuad, setOverQuad] = useState<string | null>(null)
   // 各象限"已完成"折叠区的开合状态
   const [openArchive, setOpenArchive] = useState<Record<string, boolean>>({})
-  const today = todayStr()
 
   const groupedTasks = useMemo(() => {
     const result: Record<string, QuadrantTasks> = {}
     for (const q of QUADRANTS) {
       const all = tasks.filter((t) => inQuadrant(t, q))
       result[q.key] = {
-        active: sortActive(all.filter((t) => t.status !== 'done'), q, today),
+        active: sortActive(all.filter((t) => t.status !== 'done'), q),
         done: all.filter((t) => t.status === 'done'),
       }
     }
     return result
-  }, [tasks, today])
+  }, [tasks])
 
   /**
    * 把拖着的任务插到 active 列表的 index 位置。
