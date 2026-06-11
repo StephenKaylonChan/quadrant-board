@@ -40,6 +40,8 @@
   --chip-doing-fg: #a8401f;
   --chip-review-bg: #e3e8f1;
   --chip-review-fg: #4f618f;
+  --chip-verify-bg: #f1e3c9;
+  --chip-verify-fg: #8a5d10;
   --chip-done-bg: #dcecdf;
   --chip-done-fg: #0f6e56;
 }
@@ -84,6 +86,8 @@
   --chip-doing-fg: #ef9772;
   --chip-review-bg: rgba(141, 165, 219, 0.16);
   --chip-review-fg: #a4b8e3;
+  --chip-verify-bg: rgba(217, 179, 102, 0.15);
+  --chip-verify-fg: #d9b366;
   --chip-done-bg: rgba(130, 208, 168, 0.14);
   --chip-done-fg: #82d0a8;
 }
@@ -399,13 +403,33 @@ button:disabled {
   color: var(--ink-soft);
 }
 .q-count {
-  margin-left: auto;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--ink-soft);
   background: var(--count-bg);
   border-radius: 999px;
   padding: 1px 9px;
+}
+.q-tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.q-archive-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  background: var(--count-bg);
+  border-radius: 999px;
+  padding: 1px 9px;
+}
+.q-archive-toggle:hover {
+  color: var(--ink);
 }
 
 .q-list {
@@ -571,28 +595,18 @@ button:disabled {
 .chip-todo   { background: var(--chip-todo-bg);   color: var(--chip-todo-fg); }
 .chip-doing  { background: var(--chip-doing-bg);  color: var(--chip-doing-fg); }
 .chip-review { background: var(--chip-review-bg); color: var(--chip-review-fg); }
+.chip-verify { background: var(--chip-verify-bg); color: var(--chip-verify-fg); }
 .chip-done   { background: var(--chip-done-bg);   color: var(--chip-done-fg); }
 .chip-due     { background: var(--count-bg); color: var(--ink-soft); }
 .chip-overdue { background: var(--error-bg); color: var(--danger); font-weight: 500; }
 
-/* ===== 每个象限底部的"已完成"折叠区 ===== */
+/* ===== 每个象限的标题行归档入口 ===== */
 .archive {
   margin-top: 8px;
+}
+.archive-open {
   border-top: 1px dashed var(--line);
   padding-top: 6px;
-}
-.archive-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  color: var(--ink-soft);
-  padding: 4px 8px;
-  border-radius: 8px;
-}
-.archive-toggle:hover {
-  background: var(--count-bg);
 }
 .archive-chevron {
   font-size: 10px;
@@ -871,6 +885,15 @@ input[type='date'] {
   gap: 10px;
   margin-top: 20px;
 }
+.sync-modal {
+  width: min(700px, 94vw);
+}
+.sync-textarea {
+  min-height: 420px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.7;
+}
 .spacer {
   flex: 1;
 }
@@ -888,6 +911,13 @@ input[type='date'] {
   .topbar {
     flex-wrap: wrap;
     gap: 12px;
+  }
+  .q-head {
+    flex-wrap: wrap;
+  }
+  .q-tools {
+    width: 100%;
+    margin-left: 0;
   }
   .axis {
     display: none;

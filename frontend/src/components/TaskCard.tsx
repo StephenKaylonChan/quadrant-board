@@ -21,6 +21,7 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: '待办',
   doing: '进行中',
   review: '待 Review',
+  verify: '待验证',
   done: '已完成',
 }
 

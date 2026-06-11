@@ -18,7 +18,7 @@
 当前主字段：
 - `important`：是否重要。
 - `due_date`：截止日期，`null` 表示无期限。
-- `status`：`todo / doing / review / done`。
+- `status`：`todo / doing / review / verify / done`。
 - `sort_order`：手动排序浮点值。
 - `created_date` / `completed_date`：决定任务在哪些日期出现。
 

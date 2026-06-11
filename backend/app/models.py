@@ -24,7 +24,7 @@ class Task(Base):
     urgency: Mapped[int] = mapped_column(Integer, default=5)
     importance: Mapped[int] = mapped_column(Integer, default=5)
 
-    status: Mapped[str] = mapped_column(String(20), default="todo")  # todo / doing / review / done
+    status: Mapped[str] = mapped_column(String(20), default="todo")  # todo / doing / review / verify / done
 
     # 手动拖拽排序用:数值小的排前面。用小数是为了"插队"时
     # 不用改动别人——插在 1 和 2 之间,自己取 1.5 就行

@@ -6,7 +6,7 @@
 |-------|------|------|
 | Phase 1 — 基础任务面板 | ✅ 完成 | 5/5 |
 | Phase 2 — 日常可用增强 | ✅ 完成 | 6/6 |
-| Phase 3 — 规划与回顾能力 | 🏗️ 进行中 | 3/7 |
+| Phase 3 — 规划与回顾能力 | 🏗️ 进行中 | 4/8 |
 | Phase 4 — 稳定性与维护 | ⏳ 未开始 | 0/6 |
 
 ## 阶段说明
@@ -19,5 +19,6 @@
 
 - 任务不属于某一天；每日面板由 `created_date <= D` 且 `(completed_date 为空 或 >= D)` 查询得到。
 - 当前四象限主模型是 `important + due_date`，旧 `urgency / importance` 只作为数据库兼容列保留，新代码 MUST NOT 读写旧打分字段。
-- 有期限象限排序 MUST 先按 `due_date` 近远，再按 `sort_order`。
+- 有期限象限排序 MUST 先按过期和状态分层，再按 `due_date` 近远，最后按 `sort_order`。
+- 状态为 `todo / doing / review / verify / done`；只有 `done` 写入 `completed_date`，`review` 和 `verify` 都留在面板上。
 - AI 拆任务只产草稿，不直接入库；保存仍走普通任务创建接口。

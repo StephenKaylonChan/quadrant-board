@@ -38,8 +38,8 @@ cd frontend && npm run build      # 前端类型检查 + 构建
 - MUST NOT 在新代码读写 `urgency / importance` 旧打分字段 — why: 旧列只为兼容老库保留，对外 API 已不暴露。
 - MUST 保持任务不属于某一天：某天 D 的面板 = `created_date <= D 且 (completed_date 为空 或 >= D)`。
 - MUST NOT 引入每日快照表 — why: 自动结转和历史回放都依赖同一个查询语义。
-- MUST 保持 `done` 才写 `completed_date`；`review` 是待审状态，MUST 留在面板上不归档。
-- MUST 使用 `sort_order` 浮点插队排序；象限内排序分层（用户拍板）：已过期 > doing > review > todo，同层内按 `due_date` 近远，再按 `sort_order`。状态优先于日期。
+- MUST 保持 `done` 才写 `completed_date`；`review` 是待审状态，`verify` 是待真实环境验证状态，MUST 留在面板上不归档。
+- MUST 使用 `sort_order` 浮点插队排序；象限内排序分层（用户拍板）：已过期 > doing > verify > todo > review，同层内按 `due_date` 近远，再按 `sort_order`。状态优先于日期。
 - MUST 通过 `toDateStr` 手拼本地日期字符串；MUST NOT 用 `toISOString()` 生成业务日期。
 - MUST NOT 提交或打印 `.env`；AI 密钥只在项目根 `.env`，变更后用 `docker compose up -d` 重建。
 - MUST 新建 ORM `Task` 时显式传 `images=[]`，避免 async SQLAlchemy 序列化触发懒加载。
@@ -60,7 +60,7 @@ cd frontend && npm run build      # 前端类型检查 + 构建
 
 1. 运行 `curl http://localhost:8000/api/health`，确认后端可用。
 2. 涉及前端或类型变化时，运行 `cd frontend && npm run build`。
-3. 关键交互改动 MUST 手动回归：拖拽、历史日期、done/review、图片复制、AI 草稿、弹窗关闭确认。
+3. 关键交互改动 MUST 手动回归：拖拽、历史日期、done/review/verify、图片复制、AI 草稿、今日同步、弹窗关闭确认。
 4. 检查边界条件：空标题、无期限、过期日期、图片类型/大小、AI 未配置、历史面板只读。
 5. 当前项目尚无自动测试；新增测试框架前，MUST 在变更说明里写清验证方式。
 

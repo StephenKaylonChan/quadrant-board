@@ -5,7 +5,7 @@ import AiQuickAdd from './components/AiQuickAdd'
 import QuadrantBoard, { type MovePatch } from './components/QuadrantBoard'
 import TaskEditor from './components/TaskEditor'
 import { addDays, todayStr } from './dates'
-import type { Task } from './types'
+import type { Task, TaskStatus } from './types'
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -13,9 +13,39 @@ type ThemeMode = 'light' | 'dark' | 'system'
 const THEME_LABEL: Record<ThemeMode, string> = { light: '浅色', dark: '深色', system: '系统' }
 const THEME_KEY = 'qb-theme'
 
+const SYNC_GROUPS: { status: TaskStatus; title: string; summary: string }[] = [
+  { status: 'review', title: '待 Review', summary: '待 Review' },
+  { status: 'verify', title: '待验证 / 测试闭环', summary: '待验证' },
+  { status: 'doing', title: '今日处理中', summary: '今日处理中' },
+  { status: 'todo', title: '待办 / 待确认', summary: '待办/待确认' },
+  { status: 'done', title: '今日已归档', summary: '今日已归档' },
+]
+
 function loadTheme(): ThemeMode {
   const saved = localStorage.getItem(THEME_KEY)
   return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system'
+}
+
+function formatSyncTask(task: Task): string {
+  const due = task.due_date ? `（截止 ${task.due_date.slice(5)}）` : ''
+  return `- ${task.title}${due}`
+}
+
+function buildDailySync(tasks: Task[]): string {
+  const byStatus = (status: TaskStatus) => tasks.filter((t) => t.status === status)
+  const lines: string[] = ['今日待办同步：', '', '总体：']
+
+  for (const group of SYNC_GROUPS) {
+    lines.push(`- ${group.summary}：${byStatus(group.status).length} 个`)
+  }
+
+  SYNC_GROUPS.forEach((group, index) => {
+    const list = byStatus(group.status)
+    lines.push('', `${index + 1}. ${group.title}`)
+    lines.push(...(list.length > 0 ? list.map(formatSyncTask) : ['- 暂无']))
+  })
+
+  return lines.join('\n')
 }
 
 export default function App() {
@@ -32,6 +62,8 @@ export default function App() {
   const [draftTotal, setDraftTotal] = useState(0)
   // 待删除的任务(点了卡片上的 ×,等用户二次确认)
   const [deleting, setDeleting] = useState<Task | null>(null)
+  const [syncDraft, setSyncDraft] = useState('')
+  const [syncCopied, setSyncCopied] = useState(false)
 
   // 后端配了大模型密钥才显示 AI 输入框
   useEffect(() => {
@@ -94,6 +126,16 @@ export default function App() {
     }
   }
 
+  async function copySyncDraft() {
+    try {
+      await navigator.clipboard.writeText(syncDraft)
+      setSyncCopied(true)
+      window.setTimeout(() => setSyncCopied(false), 1200)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '复制失败')
+    }
+  }
+
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]
 
@@ -139,6 +181,14 @@ export default function App() {
         >
           + 新任务
         </button>
+        <button
+          className="ghost-btn"
+          onClick={() => setSyncDraft(buildDailySync(tasks))}
+          disabled={!isToday}
+          title={isToday ? '' : '历史面板不生成今日同步'}
+        >
+          今日同步
+        </button>
       </header>
 
       {!isToday && <div className="hint-bar">正在回顾 {boardDate} 的面板(新任务只能建在今天)</div>}
@@ -177,6 +227,33 @@ export default function App() {
               </button>
               <button type="button" className="ghost-btn" onClick={() => setDeleting(null)}>
                 取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {syncDraft && (
+        <div className="overlay" onClick={() => setSyncDraft('')}>
+          <div
+            className="modal sync-modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>今日同步</h2>
+            <textarea
+              className="sync-textarea"
+              value={syncDraft}
+              onChange={(e) => setSyncDraft(e.target.value)}
+              aria-label="今日同步内容"
+            />
+            <div className="modal-foot">
+              <button type="button" className="primary-btn" onClick={() => void copySyncDraft()}>
+                {syncCopied ? '已复制' : '复制'}
+              </button>
+              <button type="button" className="ghost-btn" onClick={() => setSyncDraft('')}>
+                关闭
               </button>
             </div>
           </div>

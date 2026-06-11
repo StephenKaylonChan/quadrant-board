@@ -37,9 +37,15 @@ function inQuadrant(t: Task, q: QuadrantDef): boolean {
   return t.important === q.important && (t.due_date !== null) === q.hasDue
 }
 
-// 优先级分层:已过期 > 进行中 > 待 Review > 待办;
+// 优先级分层:已过期 > 进行中 > 待验证 > 待办 > 待 Review;
 // 同一层内截止越近越靠前,再相同才看手动拖拽顺序
-const STATUS_RANK: Record<TaskStatus, number> = { doing: 1, review: 2, todo: 3, done: 4 }
+const STATUS_RANK: Record<TaskStatus, number> = {
+  doing: 1,
+  verify: 2,
+  todo: 3,
+  review: 4,
+  done: 5,
+}
 
 function sortActive(list: Task[], q: QuadrantDef): Task[] {
   const today = todayStr()
@@ -129,7 +135,19 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
             <header className="q-head">
               <h2>{q.title}</h2>
               <span className="q-hint">{q.hint}</span>
-              <span className="q-count">{active.length}</span>
+              <span className="q-tools">
+                <span className="q-count">当前 {active.length}</span>
+                {done.length > 0 && (
+                  <button
+                    type="button"
+                    className="q-archive-toggle"
+                    onClick={() => setOpenArchive((p) => ({ ...p, [q.key]: !archiveOpen }))}
+                  >
+                    <span>归档 {done.length}</span>
+                    <span className="archive-chevron">{archiveOpen ? '▾' : '▸'}</span>
+                  </button>
+                )}
+              </span>
             </header>
 
             <div className="q-list">
@@ -158,27 +176,17 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
               )}
             </div>
 
-            {done.length > 0 && (
-              <div className="archive">
-                <button
-                  type="button"
-                  className="archive-toggle"
-                  onClick={() => setOpenArchive((p) => ({ ...p, [q.key]: !archiveOpen }))}
-                >
-                  <span>✓ 已完成 {done.length}</span>
-                  <span className="archive-chevron">{archiveOpen ? '▾' : '▸'}</span>
-                </button>
-                {archiveOpen && (
-                  <ul className="archive-list">
-                    {done.map((t) => (
-                      <li key={t.id}>
-                        <button type="button" onClick={() => onSelect(t)}>
-                          {t.title}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+            {done.length > 0 && archiveOpen && (
+              <div className="archive archive-open">
+                <ul className="archive-list">
+                  {done.map((t) => (
+                    <li key={t.id}>
+                      <button type="button" onClick={() => onSelect(t)}>
+                        {t.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </section>

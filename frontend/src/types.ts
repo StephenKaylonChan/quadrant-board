@@ -1,6 +1,6 @@
 // 和后端 schemas.py 里的 TaskOut / ImageOut 一一对应
-// review = 已提交 PR 待审核:不用动手但没完事,留在面板上
-export type TaskStatus = 'todo' | 'doing' | 'review' | 'done'
+// review = 已提交 PR 待审核:轮到别人处理;verify = 已合并待真实环境验证:轮到自己收口
+export type TaskStatus = 'todo' | 'doing' | 'review' | 'verify' | 'done'
 
 export interface TaskImage {
   id: number

@@ -9,8 +9,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # Literal = 只允许这几个值,传别的直接报 422
-# review = 已提交 PR 等审核:自己不用动手了,但事情没完,留在面板上不归档
-Status = Literal["todo", "doing", "review", "done"]
+# review = 已提交 PR 等审核;verify = 已合并待真实环境验证,两者都不归档
+Status = Literal["todo", "doing", "review", "verify", "done"]
 
 
 class ImageOut(BaseModel):
@@ -27,7 +27,7 @@ class TaskCreate(BaseModel):
     description: str = ""
     important: bool = True
     due_date: date | None = None  # null = 无期限(落在左列)
-    status: Status = "todo"  # AI 拆解可能直接带上"待 Review"等状态
+    status: Status = "todo"  # AI 拆解可能直接带上"待 Review/待验证"等状态
 
 
 class TaskUpdate(BaseModel):

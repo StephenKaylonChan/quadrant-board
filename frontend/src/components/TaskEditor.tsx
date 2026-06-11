@@ -24,6 +24,7 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'todo', label: '待办' },
   { value: 'doing', label: '进行中' },
   { value: 'review', label: '待 Review' },
+  { value: 'verify', label: '待验证' },
   { value: 'done', label: '已完成' },
 ]
 
