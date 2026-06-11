@@ -24,8 +24,8 @@ export default function Lightbox({ url, onClose }: Props) {
     try {
       await copyImageToClipboard(url)
       setToast('已复制到剪贴板')
-    } catch {
-      setToast('复制失败:浏览器不支持或没给剪贴板权限')
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : '复制失败:浏览器不支持或没给剪贴板权限')
     }
     window.setTimeout(() => setToast(''), 1500)
   }

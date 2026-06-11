@@ -43,7 +43,7 @@ export default function TaskCard({
   onDragEnd,
   onDropOnCard,
 }: Props) {
-  const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [copyTip, setCopyTip] = useState<{ id: number; text: string } | null>(null)
   const [dropSide, setDropSide] = useState<'before' | 'after' | null>(null)
 
   function dropAfter(e: DragEvent<HTMLElement>): boolean {
@@ -64,11 +64,11 @@ export default function TaskCard({
     e.stopPropagation() // 点缩略图只复制,不打开编辑弹窗
     try {
       await copyImageToClipboard(imageUrl(img))
-      setCopiedId(img.id)
-      window.setTimeout(() => setCopiedId(null), 1200)
-    } catch {
-      /* 复制失败时不打断操作,静默忽略 */
+      setCopyTip({ id: img.id, text: '已复制' })
+    } catch (err) {
+      setCopyTip({ id: img.id, text: err instanceof Error ? err.message : '复制失败' })
     }
+    window.setTimeout(() => setCopyTip(null), 1600)
   }
 
   const due = dueLabel(task.due_date)
@@ -138,7 +138,7 @@ export default function TaskCard({
               onClick={(e) => void copyThumb(e, img)}
             >
               <img src={imageUrl(img)} alt={img.original_name || '任务图片'} />
-              {copiedId === img.id && <span className="copied-badge">已复制</span>}
+              {copyTip?.id === img.id && <span className="copied-badge">{copyTip.text}</span>}
             </button>
           ))}
         </div>
