@@ -987,6 +987,23 @@ input[type='date'] {
   border-radius: 10px;
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
 }
+.lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lightbox-copy {
+  min-width: 86px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  padding: 0 14px;
+}
+.lightbox-copy:hover {
+  background: var(--accent-deep);
+}
 .lightbox-hint {
   color: rgba(255, 255, 255, 0.72);
   font-size: 12px;
