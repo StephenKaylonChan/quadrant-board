@@ -24,7 +24,7 @@
 
 旧字段 `urgency / importance` 只保留兼容老库，新代码不应读写。
 
-`init_db()` 只做轻量迁移：`create_all()` 建新表，但不会给旧表补列，所以新字段需要沿用当前 `PRAGMA table_info(tasks)` 后 `ALTER TABLE` 的模式。已有迁移包括 `sort_order`、`important` 和 `due_date`。
+`init_db()` 只做轻量迁移：`create_all()` 建新表，但不会给旧表补列，所以新字段需要沿用当前 `PRAGMA table_info(tasks)` 后 `ALTER TABLE` 的模式。已有迁移包括 `sort_order`、`important` 和 `due_date`；`status`、`created_date`、`completed_date` 等早期列已经在现有库中存在。
 
 ## 每日面板查询
 
@@ -54,4 +54,4 @@ AI 接口读取 `.env` 中的大模型配置，但不能打印密钥。后端按
 
 ## 验证方式
 
-FastAPI 自动生成接口文档：`http://localhost:8000/docs`。当前没有 pytest 配置，最低验证是 `curl http://localhost:8000/api/health`，接口变更需手动调用对应端点。前端构建验证是 `cd frontend && npm run build`。
+FastAPI 自动生成接口文档：`http://localhost:8000/docs`。当前没有 pytest 配置，最低验证是 `curl http://localhost:8000/api/health`。基础接口回归由 `docker compose exec frontend npm run smoke:api` 覆盖任务创建、今日列表、完成日期、恢复和删除；前端构建验证是 `docker compose exec frontend npm run build`。

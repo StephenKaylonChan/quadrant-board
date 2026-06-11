@@ -22,7 +22,8 @@ docker compose up -d --build      # 依赖或 Dockerfile 变化后重建
 docker compose logs -f            # 查看日志
 docker compose down               # 停止服务
 curl http://localhost:8000/api/health  # 后端健康检查
-cd frontend && npm run build      # 前端类型检查 + 构建
+docker compose exec frontend npm run build     # 前端类型检查 + 构建
+docker compose exec frontend npm run smoke:api # 基础接口冒烟检查
 ```
 
 ## 技术栈
@@ -39,7 +40,7 @@ cd frontend && npm run build      # 前端类型检查 + 构建
 - MUST 保持任务不属于某一天：某天 D 的面板 = `created_date <= D 且 (completed_date 为空 或 >= D)`。
 - MUST NOT 引入每日快照表 — why: 自动结转和历史回放都依赖同一个查询语义。
 - MUST 保持 `done` 才写 `completed_date`；`review` 是待审状态，`verify` 是待真实环境验证状态，MUST 留在面板上不归档。
-- MUST 使用 `sort_order` 浮点插队排序；象限内排序分层（用户拍板）：已过期 > doing > verify > todo > review，同层内按 `due_date` 近远，再按 `sort_order`。状态优先于日期。
+- MUST 使用 `sort_order` 浮点插队排序；有期限象限先按 `due_date` 近远，同一天内再按 `doing > verify > todo > review` 和 `sort_order`；无期限象限先按状态再按 `sort_order`。
 - MUST 通过 `toDateStr` 手拼本地日期字符串；MUST NOT 用 `toISOString()` 生成业务日期。
 - MUST NOT 提交或打印 `.env`；AI 密钥只在项目根 `.env`，变更后用 `docker compose up -d` 重建。
 - MUST 新建 ORM `Task` 时显式传 `images=[]`，避免 async SQLAlchemy 序列化触发懒加载。
@@ -47,7 +48,7 @@ cd frontend && npm run build      # 前端类型检查 + 构建
 
 ## 交互约束
 
-- 图片卡片缩略图点击 = 复制剪贴板；弹窗点图 = 自制灯箱；灯箱右键 = 复制。
+- 图片卡片缩略图点击 = 复制剪贴板；弹窗点图 = 自制灯箱；灯箱复制按钮和右键 = 复制。
 - 删除任务 MUST 二次确认，MUST 使用 App 层 `confirm-layer`，MUST NOT 用 `window.confirm`。
 - 编辑弹窗点外部时，有未保存内容 MUST 弹「保存 / 不保存 / 继续编辑」三选一。
 - 主题 MUST 使用 CSS 变量；深色在 `[data-theme='dark']` 整组覆盖，MUST NOT 写死大面积深彩色块。
@@ -59,10 +60,10 @@ cd frontend && npm run build      # 前端类型检查 + 构建
 ### 代码验证
 
 1. 运行 `curl http://localhost:8000/api/health`，确认后端可用。
-2. 涉及前端或类型变化时，运行 `cd frontend && npm run build`。
+2. 涉及前端或类型变化时，运行 `docker compose exec frontend npm run build`。
 3. 关键交互改动 MUST 手动回归：拖拽、历史日期、done/review/verify、图片复制、AI 草稿、今日同步、弹窗关闭确认。
 4. 检查边界条件：空标题、无期限、过期日期、图片类型/大小、AI 未配置、历史面板只读。
-5. 当前项目尚无自动测试；新增测试框架前，MUST 在变更说明里写清验证方式。
+5. 接口链路变更时运行 `docker compose exec frontend npm run smoke:api`；它不覆盖拖拽、粘贴图片、灯箱复制等浏览器交互。
 
 ### 进度同步
 
