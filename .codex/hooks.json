@@ -1,0 +1,74 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/stephen/Downloads/00_project/01_🌏世界旅行/quadrant-board/.codex/hooks/post-write.sh'"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/stephen/Downloads/00_project/01_🌏世界旅行/quadrant-board/.codex/hooks/pre-compact-save.sh'"
+          }
+        ]
+      },
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/stephen/Downloads/00_project/01_🌏世界旅行/quadrant-board/.codex/hooks/pre-compact-save.sh'"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/stephen/Downloads/00_project/01_🌏世界旅行/quadrant-board/.codex/hooks/session-start.sh'"
+          }
+        ]
+      },
+      {
+        "matcher": "resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/stephen/Downloads/00_project/01_🌏世界旅行/quadrant-board/.codex/hooks/session-start.sh'"
+          }
+        ]
+      },
+      {
+        "matcher": "clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/stephen/Downloads/00_project/01_🌏世界旅行/quadrant-board/.codex/hooks/session-start.sh'"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/stephen/Downloads/00_project/01_🌏世界旅行/quadrant-board/.codex/hooks/on-prompt-submit.sh'"
+          }
+        ]
+      }
+    ]
+  }
+}

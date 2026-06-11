@@ -1,0 +1,83 @@
+# 上手指南
+
+## 环境要求
+
+- Docker Desktop
+- 浏览器
+- 如需直接跑前端构建，需要本机 Node.js 20+ 和 npm
+- 如需直接跑后端，需要 Python 3.12
+
+## 首次运行
+
+```bash
+docker compose up -d
+```
+
+首次启动会构建后端镜像并安装前端依赖。启动后访问：
+
+- 前端：http://localhost:5173
+- 后端文档：http://localhost:8000/docs
+- 健康检查：http://localhost:8000/api/health
+
+查看日志：
+
+```bash
+docker compose logs -f
+```
+
+停止服务：
+
+```bash
+docker compose down
+```
+
+前端和后端代码都通过 volume 挂进容器。普通代码修改会热重载；改 `backend/requirements.txt` 或 `frontend/package.json` 后，需要重新构建或重启对应容器。
+
+## AI 配置
+
+AI 拆任务读取项目根 `.env`：
+
+```text
+LLM_BASE_URL=...
+CHAT_MODEL=...
+LLM_API_KEY=...
+```
+
+`.env` 已被忽略，MUST NOT 提交或打印。未配置时 AI 输入框隐藏，其余功能可用。
+
+修改 `.env` 后运行：
+
+```bash
+docker compose up -d
+```
+
+## 数据位置
+
+- SQLite 数据库：`data/app.db`
+- 上传图片：`data/uploads/`
+
+备份项目数据时，重点备份整个 `data/` 目录。
+
+## 常用验证
+
+```bash
+curl http://localhost:8000/api/health
+cd frontend && npm run build
+```
+
+当前没有自动测试框架，关键交互改动需要手动回归。
+
+## 项目结构
+
+```text
+backend/app/main.py              FastAPI 入口、路由和静态目录
+backend/app/routers/tasks.py     任务、每日面板和图片接口
+backend/app/routers/ai.py        AI 拆任务草稿接口
+backend/app/database.py          async SQLAlchemy 连接、建表和轻量迁移
+frontend/src/App.tsx             单屏应用状态容器
+frontend/src/api.ts              前端请求封装
+frontend/src/components/         四象限、卡片、编辑弹窗、AI 输入和灯箱
+frontend/src/dates.ts            本地时区日期字符串工具
+frontend/src/styles.css          全局样式和主题变量
+data/                            运行期数据库和上传图片
+```
