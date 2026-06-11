@@ -73,10 +73,11 @@ export default function TaskCard({
 
   const due = dueLabel(task.due_date)
   const dropClass = dropSide === null || dragging ? '' : ` card-drop-${dropSide}`
+  const overdueClass = due?.overdue ? ' card-overdue' : ''
 
   return (
     <article
-      className={`card card-${task.status}${dragging ? ' card-dragging' : ''}${dropClass}`}
+      className={`card card-${task.status}${overdueClass}${dragging ? ' card-dragging' : ''}${dropClass}`}
       draggable
       onClick={onClick}
       onDragStart={(e) => {
