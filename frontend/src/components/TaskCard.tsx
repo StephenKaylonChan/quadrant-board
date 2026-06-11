@@ -47,15 +47,20 @@ export default function TaskCard({
   onDropOnCard,
 }: Props) {
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [dropSide, setDropSide] = useState<'before' | 'after' | null>(null)
+
+  function dropAfter(e: DragEvent<HTMLElement>): boolean {
+    // 两列网格里判断"放前面还是后面":以反对角线分割,
+    // 落点偏左上算前面,偏右下算后面
+    const r = e.currentTarget.getBoundingClientRect()
+    return (e.clientX - r.left) / r.width + (e.clientY - r.top) / r.height > 1
+  }
 
   function handleDrop(e: DragEvent<HTMLElement>) {
     e.preventDefault()
     e.stopPropagation() // 别让象限的 onDrop 再处理一遍
-    // 两列网格里判断"放前面还是后面":以反对角线分割,
-    // 落点偏左上算前面,偏右下算后面
-    const r = e.currentTarget.getBoundingClientRect()
-    const after = (e.clientX - r.left) / r.width + (e.clientY - r.top) / r.height > 1
-    onDropOnCard(after)
+    setDropSide(null)
+    onDropOnCard(dropAfter(e))
   }
 
   async function copyThumb(e: ReactMouseEvent, img: TaskImage) {
@@ -72,18 +77,30 @@ export default function TaskCard({
   const thumbs = task.images.slice(0, MAX_THUMBS)
   const extra = task.images.length - thumbs.length
   const due = dueLabel(task.due_date)
+  const dropClass = dropSide === null || dragging ? '' : ` card-drop-${dropSide}`
 
   return (
     <article
-      className={`card card-${task.status}${dragging ? ' card-dragging' : ''}`}
+      className={`card card-${task.status}${dragging ? ' card-dragging' : ''}${dropClass}`}
       draggable
       onClick={onClick}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move'
         onDragStart()
       }}
-      onDragEnd={onDragEnd}
-      onDragOver={(e) => e.preventDefault()}
+      onDragEnd={() => {
+        setDropSide(null)
+        onDragEnd()
+      }}
+      onDragOver={(e) => {
+        e.preventDefault()
+        if (!dragging) setDropSide(dropAfter(e) ? 'after' : 'before')
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setDropSide(null)
+        }
+      }}
       onDrop={handleDrop}
     >
       <div className="card-top">

@@ -106,7 +106,7 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
   }
 
   return (
-    <main className="board">
+    <main className={`board${draggingId !== null ? ' board-dragging' : ''}`}>
       <span className="axis axis-y">重要性</span>
       <span className="axis axis-x">时限压力 →</span>
 
@@ -124,6 +124,11 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
               if (draggingId !== null) {
                 e.preventDefault() // 默认是"禁止放下",阻止掉才能触发 onDrop
                 setOverQuad(q.key)
+              }
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                setOverQuad(null)
               }
             }}
             onDrop={(e) => {
@@ -174,6 +179,7 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
                   />
                 ))
               )}
+              {draggingId !== null && <div className="drop-tail" aria-hidden="true">放到末尾</div>}
             </div>
 
             {done.length > 0 && archiveOpen && (
