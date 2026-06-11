@@ -72,9 +72,10 @@ docker compose up -d
 ```bash
 curl http://localhost:8000/api/health
 docker compose exec frontend npm run build
+docker compose exec frontend npm run smoke:api
 ```
 
-当前没有自动测试框架，关键交互改动需要手动回归。前端依赖安装在 Docker volume 内，宿主机没有 `node_modules` 时，优先在容器里跑构建验证。
+`smoke:api` 会创建一个临时任务，验证健康检查、任务列表、完成日期、恢复和删除链路，结束时自动清理。它覆盖不了拖拽、粘贴图片和灯箱复制，关键交互改动仍需要手动回归。前端依赖安装在 Docker volume 内，宿主机没有 `node_modules` 时，优先在容器里跑构建验证。
 
 ## 项目结构
 

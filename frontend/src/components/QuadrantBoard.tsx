@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { todayStr } from '../dates'
 import { STATUS_META } from '../statusMeta'
 import type { Task } from '../types'
@@ -26,6 +26,11 @@ interface QuadrantDef {
   hasDue: boolean
 }
 
+interface QuadrantTasks {
+  active: Task[]
+  done: Task[]
+}
+
 // 两个维度:重要吗(上下)× 有没有截止日期(左右)
 const QUADRANTS: QuadrantDef[] = [
   { key: 'plan', title: '重要 · 无期限', hint: '每天上午固定时间做', important: true, hasDue: false },
@@ -40,8 +45,7 @@ function inQuadrant(t: Task, q: QuadrantDef): boolean {
 
 // 优先级分层:已过期 > 进行中 > 待验证 > 待办 > 待 Review;
 // 同一层内截止越近越靠前,再相同才看手动拖拽顺序
-function sortActive(list: Task[], q: QuadrantDef): Task[] {
-  const today = todayStr()
+function sortActive(list: Task[], q: QuadrantDef, today: string): Task[] {
   // 已过期单独算第 0 层,压过所有状态
   const tier = (t: Task) =>
     q.hasDue && t.due_date !== null && t.due_date < today ? 0 : STATUS_META[t.status].activeRank
@@ -61,6 +65,19 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
   const [overQuad, setOverQuad] = useState<string | null>(null)
   // 各象限"已完成"折叠区的开合状态
   const [openArchive, setOpenArchive] = useState<Record<string, boolean>>({})
+  const today = todayStr()
+
+  const groupedTasks = useMemo(() => {
+    const result: Record<string, QuadrantTasks> = {}
+    for (const q of QUADRANTS) {
+      const all = tasks.filter((t) => inQuadrant(t, q))
+      result[q.key] = {
+        active: sortActive(all.filter((t) => t.status !== 'done'), q, today),
+        done: all.filter((t) => t.status === 'done'),
+      }
+    }
+    return result
+  }, [tasks, today])
 
   /**
    * 把拖着的任务插到 active 列表的 index 位置。
@@ -104,9 +121,7 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
       <span className="axis axis-x">时限压力 →</span>
 
       {QUADRANTS.map((q) => {
-        const all = tasks.filter((t) => inQuadrant(t, q))
-        const active = sortActive(all.filter((t) => t.status !== 'done'), q)
-        const done = all.filter((t) => t.status === 'done')
+        const { active, done } = groupedTasks[q.key]
         const archiveOpen = openArchive[q.key] ?? false
 
         return (
