@@ -9,6 +9,7 @@ import {
 } from '../api'
 import type { TaskDraft } from '../api'
 import { addDays, todayStr } from '../dates'
+import { EDITOR_STATUS_ORDER, STATUS_META } from '../statusMeta'
 import type { Task, TaskImage, TaskStatus } from '../types'
 import Lightbox from './Lightbox'
 
@@ -19,14 +20,6 @@ interface Props {
   onClose: () => void
   onChanged: () => Promise<void> | void // 数据变了通知 App 重新拉列表
 }
-
-const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
-  { value: 'todo', label: '待办' },
-  { value: 'doing', label: '进行中' },
-  { value: 'review', label: '待 Review' },
-  { value: 'verify', label: '待验证' },
-  { value: 'done', label: '已完成' },
-]
 
 // 截止日期的快捷选择;"选日期"会展开一个日期输入框
 type DueChoice = 'today' | 'tomorrow' | 'date' | 'none'
@@ -329,14 +322,14 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
         <div className="field">
           <span className="field-label">状态</span>
           <div className="seg">
-            {STATUS_OPTIONS.map((opt) => (
+            {EDITOR_STATUS_ORDER.map((statusValue) => (
               <button
-                key={opt.value}
+                key={statusValue}
                 type="button"
-                className={status === opt.value ? 'on' : ''}
-                onClick={() => setStatus(opt.value)}
+                className={status === statusValue ? 'on' : ''}
+                onClick={() => setStatus(statusValue)}
               >
-                {opt.label}
+                {STATUS_META[statusValue].label}
               </button>
             ))}
           </div>

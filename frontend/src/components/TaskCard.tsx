@@ -3,7 +3,8 @@ import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react'
 import { imageUrl } from '../api'
 import { copyImageToClipboard } from '../clipboard'
 import { dueLabel } from '../dates'
-import type { Task, TaskImage, TaskStatus } from '../types'
+import { STATUS_META } from '../statusMeta'
+import type { Task, TaskImage } from '../types'
 
 interface Props {
   task: Task
@@ -15,22 +16,6 @@ interface Props {
   onDragEnd: () => void
   // 把别的卡片拖到这张卡上松手:after 表示插到这张卡的后面还是前面
   onDropOnCard: (after: boolean) => void
-}
-
-const STATUS_LABEL: Record<TaskStatus, string> = {
-  todo: '待办',
-  doing: '进行中',
-  review: '待 Review',
-  verify: '待验证',
-  done: '已完成',
-}
-
-const STATUS_ICON: Record<TaskStatus, string> = {
-  todo: '○',
-  doing: '▶',
-  review: '↗',
-  verify: '◇',
-  done: '✓',
 }
 
 export default function TaskCard({
@@ -72,6 +57,7 @@ export default function TaskCard({
   }
 
   const due = dueLabel(task.due_date)
+  const statusMeta = STATUS_META[task.status]
   const dropClass = dropSide === null || dragging ? '' : ` card-drop-${dropSide}`
   const overdueClass = due?.overdue ? ' card-overdue' : ''
 
@@ -103,8 +89,8 @@ export default function TaskCard({
         <span className="card-top-left">
           <span className="card-index">{index}</span>
           <span className={`chip chip-${task.status}`}>
-            <span className="chip-icon" aria-hidden="true">{STATUS_ICON[task.status]}</span>
-            {STATUS_LABEL[task.status]}
+            <span className="chip-icon" aria-hidden="true">{statusMeta.icon}</span>
+            {statusMeta.label}
           </span>
         </span>
         <span className="card-top-right">

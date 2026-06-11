@@ -5,6 +5,7 @@ import AiQuickAdd from './components/AiQuickAdd'
 import QuadrantBoard, { type MovePatch } from './components/QuadrantBoard'
 import TaskEditor from './components/TaskEditor'
 import { addDays, todayStr } from './dates'
+import { STATUS_META, SYNC_STATUS_ORDER } from './statusMeta'
 import type { Task, TaskStatus } from './types'
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
@@ -12,22 +13,6 @@ const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 type ThemeMode = 'light' | 'dark' | 'system'
 const THEME_LABEL: Record<ThemeMode, string> = { light: '浅色', dark: '深色', system: '系统' }
 const THEME_KEY = 'qb-theme'
-
-const SYNC_GROUPS: { status: TaskStatus; title: string; summary: string }[] = [
-  { status: 'review', title: '待 Review', summary: '待 Review' },
-  { status: 'verify', title: '待验证 / 测试闭环', summary: '待验证' },
-  { status: 'doing', title: '今日处理中', summary: '今日处理中' },
-  { status: 'todo', title: '待办 / 待确认', summary: '待办/待确认' },
-  { status: 'done', title: '今日已归档', summary: '今日已归档' },
-]
-
-const STATUS_SYNC_ICON: Record<TaskStatus, string> = {
-  todo: '○',
-  doing: '▶',
-  review: '↗',
-  verify: '◇',
-  done: '✓',
-}
 
 function loadTheme(): ThemeMode {
   const saved = localStorage.getItem(THEME_KEY)
@@ -55,13 +40,15 @@ function buildDailySync(tasks: Task[], today: string, weekday: string): string {
   const byStatus = (status: TaskStatus) => tasks.filter((t) => t.status === status)
   const lines: string[] = [`今日待办同步（${today} 周${weekday}）：`, '', '总体：']
 
-  for (const group of SYNC_GROUPS) {
-    lines.push(`- ${STATUS_SYNC_ICON[group.status]} ${group.summary}：${byStatus(group.status).length} 个`)
+  for (const status of SYNC_STATUS_ORDER) {
+    const meta = STATUS_META[status]
+    lines.push(`- ${meta.icon} ${meta.syncSummary}：${byStatus(status).length} 个`)
   }
 
-  SYNC_GROUPS.forEach((group, index) => {
-    const list = byStatus(group.status)
-    lines.push('', `${index + 1}. ${STATUS_SYNC_ICON[group.status]} ${group.title}`)
+  SYNC_STATUS_ORDER.forEach((status, index) => {
+    const meta = STATUS_META[status]
+    const list = byStatus(status)
+    lines.push('', `${index + 1}. ${meta.icon} ${meta.syncTitle}`)
     lines.push(...(list.length > 0 ? list.flatMap((task) => formatSyncTask(task, today)) : ['- 暂无']))
   })
 

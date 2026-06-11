@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { todayStr } from '../dates'
-import type { Task, TaskStatus } from '../types'
+import { STATUS_META } from '../statusMeta'
+import type { Task } from '../types'
 import TaskCard from './TaskCard'
 
 // 拖拽落点要改的字段:新顺序 + 目标象限对应的重要性/截止日期
@@ -39,19 +40,11 @@ function inQuadrant(t: Task, q: QuadrantDef): boolean {
 
 // 优先级分层:已过期 > 进行中 > 待验证 > 待办 > 待 Review;
 // 同一层内截止越近越靠前,再相同才看手动拖拽顺序
-const STATUS_RANK: Record<TaskStatus, number> = {
-  doing: 1,
-  verify: 2,
-  todo: 3,
-  review: 4,
-  done: 5,
-}
-
 function sortActive(list: Task[], q: QuadrantDef): Task[] {
   const today = todayStr()
   // 已过期单独算第 0 层,压过所有状态
   const tier = (t: Task) =>
-    q.hasDue && t.due_date !== null && t.due_date < today ? 0 : STATUS_RANK[t.status]
+    q.hasDue && t.due_date !== null && t.due_date < today ? 0 : STATUS_META[t.status].activeRank
 
   return [...list].sort((a, b) => {
     const byTier = tier(a) - tier(b)
