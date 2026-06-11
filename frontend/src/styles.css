@@ -467,6 +467,14 @@ button:disabled {
 .q-archive-toggle:hover {
   color: var(--ink);
 }
+.q-review-toggle {
+  background: var(--chip-review-bg);
+  color: var(--chip-review-fg);
+}
+.q-review-toggle:hover {
+  color: var(--chip-review-fg);
+  box-shadow: inset 0 0 0 1px var(--status-review-border);
+}
 
 .q-list {
   flex: 1;
@@ -772,6 +780,18 @@ button:disabled {
 .archive-list button:hover {
   background: var(--count-bg);
   color: var(--ink);
+}
+.review-box {
+  border-color: var(--status-review-border);
+}
+.review-list button {
+  color: var(--chip-review-fg);
+  text-decoration: none;
+}
+.review-list button::before {
+  content: '↗';
+  margin-right: 6px;
+  color: var(--chip-review-fg);
 }
 
 /* ===== 弹窗 ===== */

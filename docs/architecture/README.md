@@ -28,7 +28,7 @@
 - 任务主字段是 `important: boolean` 和 `due_date: date | null`。
 - 旧 `urgency / importance` 只为兼容老数据库保留，新代码不读写。
 - 每日面板不是快照，按日期查询任务是否出现在当天。
-- `done` 任务用 `completed_date` 决定历史可见性；`review` 和 `verify` 留在面板上。
+- `done` 任务用 `completed_date` 决定历史可见性；`review` 和 `verify` 都留在面板上,但 UI 默认把 `review` 折叠到等待区,`verify` 继续留在主列表。
 - 有期限任务的紧急感来自 `due_date` 距离今天的远近，不再需要人工打紧急度分。
 
 ## 非直觉决策

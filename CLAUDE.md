@@ -41,6 +41,7 @@ docker compose exec frontend npm run smoke:api # 基础接口冒烟检查
 - MUST NOT 引入每日快照表 — why: 自动结转和历史回放都依赖同一个查询语义。
 - MUST 保持 `done` 才写 `completed_date`；`review` 是待审状态，`verify` 是待真实环境验证状态，MUST 留在面板上不归档。
 - MUST 使用 `sort_order` 浮点插队排序；有期限象限先按 `due_date` 近远，同一天内再按 `doing > verify > todo > review` 和 `sort_order`；无期限象限先按状态再按 `sort_order`。
+- UI 层 MUST 默认把 `review` 折叠到象限标题行的“待 Review”等待区；`verify` 仍留在主列表，作为需要自己收口的事项。
 - MUST 通过 `toDateStr` 手拼本地日期字符串；MUST NOT 用 `toISOString()` 生成业务日期。
 - MUST NOT 提交或打印 `.env`；AI 密钥只在项目根 `.env`，变更后用 `docker compose up -d` 重建。
 - MUST 新建 ORM `Task` 时显式传 `images=[]`，避免 async SQLAlchemy 序列化触发懒加载。

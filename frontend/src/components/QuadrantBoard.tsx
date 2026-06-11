@@ -28,6 +28,7 @@ interface QuadrantDef {
 
 interface QuadrantTasks {
   active: Task[]
+  review: Task[]
   done: Task[]
 }
 
@@ -61,13 +62,16 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
   const [overQuad, setOverQuad] = useState<string | null>(null)
   // 各象限"已完成"折叠区的开合状态
   const [openArchive, setOpenArchive] = useState<Record<string, boolean>>({})
+  // 待 Review 是"等别人"的等待区,默认不占主列表视线
+  const [openReview, setOpenReview] = useState<Record<string, boolean>>({})
 
   const groupedTasks = useMemo(() => {
     const result: Record<string, QuadrantTasks> = {}
     for (const q of QUADRANTS) {
       const all = tasks.filter((t) => inQuadrant(t, q))
       result[q.key] = {
-        active: sortActive(all.filter((t) => t.status !== 'done'), q),
+        active: sortActive(all.filter((t) => t.status !== 'done' && t.status !== 'review'), q),
+        review: sortActive(all.filter((t) => t.status === 'review'), q),
         done: all.filter((t) => t.status === 'done'),
       }
     }
@@ -116,7 +120,8 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
       <span className="axis axis-x">时限压力 →</span>
 
       {QUADRANTS.map((q) => {
-        const { active, done } = groupedTasks[q.key]
+        const { active, review, done } = groupedTasks[q.key]
+        const reviewOpen = openReview[q.key] ?? false
         const archiveOpen = openArchive[q.key] ?? false
 
         return (
@@ -145,6 +150,16 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
               <span className="q-hint">{q.hint}</span>
               <span className="q-tools">
                 <span className="q-count">当前 {active.length}</span>
+                {review.length > 0 && (
+                  <button
+                    type="button"
+                    className="q-archive-toggle q-review-toggle"
+                    onClick={() => setOpenReview((p) => ({ ...p, [q.key]: !reviewOpen }))}
+                  >
+                    <span>待 Review {review.length}</span>
+                    <span className="archive-chevron">{reviewOpen ? '▾' : '▸'}</span>
+                  </button>
+                )}
                 {done.length > 0 && (
                   <button
                     type="button"
@@ -159,7 +174,7 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
             </header>
 
             <div className="q-list">
-              {active.length === 0 && done.length === 0 ? (
+              {active.length === 0 && review.length === 0 && done.length === 0 ? (
                 <p className="q-empty">空着挺好</p>
               ) : (
                 active.map((t, i) => (
@@ -184,6 +199,20 @@ export default function QuadrantBoard({ tasks, onSelect, onDelete, onMove }: Pro
               )}
               {draggingId !== null && <div className="drop-tail" aria-hidden="true">放到末尾</div>}
             </div>
+
+            {review.length > 0 && reviewOpen && (
+              <div className="archive review-box archive-open">
+                <ul className="archive-list review-list">
+                  {review.map((t) => (
+                    <li key={t.id}>
+                      <button type="button" onClick={() => onSelect(t)}>
+                        {t.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {done.length > 0 && archiveOpen && (
               <div className="archive archive-open">
