@@ -156,6 +156,34 @@ export default function App() {
     }
   }
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (deleting) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          setDeleting(null)
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          void confirmDelete()
+        }
+        return
+      }
+      if (syncDraft) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          setSyncDraft('')
+        }
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault()
+          void copySyncDraft()
+        }
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [deleting, syncDraft])
+
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]
 
@@ -271,7 +299,12 @@ export default function App() {
               aria-label="今日同步内容"
             />
             <div className="modal-foot">
-              <button type="button" className="primary-btn" onClick={() => void copySyncDraft()}>
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={() => void copySyncDraft()}
+                title="Ctrl / Cmd + Enter"
+              >
                 {syncCopied ? '已复制' : '复制'}
               </button>
               <button type="button" className="ghost-btn" onClick={() => setSyncDraft('')}>

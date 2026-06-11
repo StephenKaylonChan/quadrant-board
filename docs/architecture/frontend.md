@@ -51,6 +51,8 @@
 
 卡片缩略图点击只复制图片，不打开编辑窗。复制失败不会打断任务操作。灯箱右键会拦截浏览器默认菜单并复制图片。
 
+键盘交互保持轻量：AI 输入框 Enter 拆任务；编辑弹窗 Ctrl/Cmd + Enter 保存、Esc 走未保存关闭确认；删除确认 Enter 删除、Esc 取消；今日同步弹窗 Ctrl/Cmd + Enter 复制、Esc 关闭。
+
 ## 日期规则
 
 业务日期 MUST 使用 `dates.ts` 的 `toDateStr` 手拼。禁止用 `toISOString()`，因为 UTC 会让 Asia/Shanghai 日期出现跨日偏差。

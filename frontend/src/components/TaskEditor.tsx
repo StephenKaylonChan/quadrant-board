@@ -210,6 +210,46 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
     else onClose()
   }
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (lightbox) return
+      if (confirmDelete) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          setConfirmDelete(false)
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          setConfirmDelete(false)
+          void handleDelete()
+        }
+        return
+      }
+      if (confirmClose) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          setConfirmClose(false)
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          setConfirmClose(false)
+          void handleSubmit()
+        }
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        attemptClose()
+      }
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        void handleSubmit()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  })
+
   return (
     <div
       className="overlay"
@@ -427,10 +467,16 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
             </button>
           )}
           <span className="spacer" />
-          <button type="button" className="ghost-btn" onClick={onClose} disabled={busy}>
+          <button type="button" className="ghost-btn" onClick={attemptClose} disabled={busy} title="Esc">
             取消
           </button>
-          <button type="button" className="primary-btn" onClick={() => void handleSubmit()} disabled={busy}>
+          <button
+            type="button"
+            className="primary-btn"
+            onClick={() => void handleSubmit()}
+            disabled={busy}
+            title="Ctrl / Cmd + Enter"
+          >
             {busy ? '处理中…' : '保存'}
           </button>
         </div>
