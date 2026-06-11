@@ -625,12 +625,18 @@ button:disabled {
 .card-thumbs {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   margin-top: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 .card-thumb {
   position: relative;
+  flex: 0 0 44px;
   width: 44px;
   height: 44px;
   border-radius: 8px;
@@ -650,10 +656,6 @@ button:disabled {
 }
 .card-thumb .copied-badge {
   font-size: 10px;
-}
-.card-thumb-more {
-  font-size: 11px;
-  color: var(--ink-soft);
 }
 
 .chip {

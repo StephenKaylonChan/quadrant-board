@@ -33,9 +33,6 @@ const STATUS_ICON: Record<TaskStatus, string> = {
   done: '✓',
 }
 
-// 卡片上最多直接展示几张缩略图,多出来的显示 +N
-const MAX_THUMBS = 4
-
 export default function TaskCard({
   task,
   index,
@@ -74,8 +71,6 @@ export default function TaskCard({
     }
   }
 
-  const thumbs = task.images.slice(0, MAX_THUMBS)
-  const extra = task.images.length - thumbs.length
   const due = dueLabel(task.due_date)
   const dropClass = dropSide === null || dragging ? '' : ` card-drop-${dropSide}`
 
@@ -131,9 +126,9 @@ export default function TaskCard({
       </div>
       <h3 className="card-title">{task.title}</h3>
       {task.description && <p className="card-desc">{task.description}</p>}
-      {thumbs.length > 0 && (
+      {task.images.length > 0 && (
         <div className="card-thumbs">
-          {thumbs.map((img) => (
+          {task.images.map((img) => (
             <button
               key={img.id}
               type="button"
@@ -145,7 +140,6 @@ export default function TaskCard({
               {copiedId === img.id && <span className="copied-badge">已复制</span>}
             </button>
           ))}
-          {extra > 0 && <span className="card-thumb-more">+{extra}</span>}
         </div>
       )}
     </article>
