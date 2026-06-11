@@ -1,0 +1,24 @@
+# 运行时数据(数据库 + 上传的图片)
+data/
+
+# API 密钥,绝不能进 git
+.env
+
+# 依赖和构建产物
+node_modules/
+dist/
+__pycache__/
+*.pyc
+
+# 系统文件
+.DS_Store
+
+# Claude Code 本地个人配置和会话状态
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/session-notes.md
+.Codex/session-notes.md
+.codex/session-notes.md
+
+# IDE 本地状态
+.idea/
