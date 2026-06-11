@@ -4,6 +4,8 @@
 
 项目背景见 [docs/architecture/background.md](docs/architecture/background.md):它记录了为什么这个工具要同时支持紧急排查线和重要建设线。
 
+源码仓库:https://github.com/StephenKaylonChan/quadrant-board
+
 ## 启动 / 停止
 
 需要先打开 Docker Desktop,然后在本目录执行:

@@ -9,6 +9,15 @@
 
 ## 首次运行
 
+如果是新机器，先拉取仓库：
+
+```bash
+git clone https://github.com/StephenKaylonChan/quadrant-board.git
+cd quadrant-board
+```
+
+本机已有项目目录时，直接在项目根目录启动：
+
 ```bash
 docker compose up -d
 ```
@@ -62,10 +71,10 @@ docker compose up -d
 
 ```bash
 curl http://localhost:8000/api/health
-cd frontend && npm run build
+docker compose exec frontend npm run build
 ```
 
-当前没有自动测试框架，关键交互改动需要手动回归。
+当前没有自动测试框架，关键交互改动需要手动回归。前端依赖安装在 Docker volume 内，宿主机没有 `node_modules` 时，优先在容器里跑构建验证。
 
 ## 项目结构
 

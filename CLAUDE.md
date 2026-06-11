@@ -73,12 +73,14 @@ cd frontend && npm run build      # 前端类型检查 + 构建
 
 ## Git 提交规范
 
-当前目录可能不是 Git 仓库。若启用 Git，commit MUST 使用 Conventional Commits：
+当前目录是 Git 仓库，默认分支 `main` 跟踪 `origin/main`，远端为 `https://github.com/StephenKaylonChan/quadrant-board.git`。commit MUST 使用 Conventional Commits：
 
 ```text
 <type>(<scope>): <subject>
 type: feat | fix | docs | refactor | perf | test | chore
 ```
+
+提交前 MUST 确认 `.env`、`data/`、`frontend/dist/`、`.idea/` 和本地 session-notes 仍然只作为 ignored 文件存在。
 
 ## 关键架构决策
 

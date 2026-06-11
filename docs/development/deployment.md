@@ -4,6 +4,8 @@
 
 本项目当前定位为单人本机使用，通过 Docker Compose 本地启动，不包含公网部署流程。
 
+GitHub 仓库：https://github.com/StephenKaylonChan/quadrant-board
+
 ```bash
 docker compose up -d
 docker compose logs -f
@@ -55,15 +57,23 @@ curl http://localhost:8000/api/health
 
 ## 回滚
 
-当前目录不是 Git 仓库时，只能依赖文件备份回滚。启用 Git 后，回滚代码前 MUST 先备份 `data/`，避免误删本地数据。
+当前项目已启用 Git，`main` 跟踪 `origin/main`。回滚代码前 MUST 先备份 `data/`，避免误删本地数据。
 
 推荐回滚顺序：
 
 1. 停止服务并备份当前 `data/`。
-2. 回滚代码或恢复上一份项目目录。
+2. 用 Git 回滚到目标提交，或重新 clone GitHub 仓库。
 3. 恢复对应 `data/`。
 4. `docker compose up -d` 启动。
 5. 用健康检查、页面访问和关键交互确认恢复成功。
+
+常用 Git 检查：
+
+```bash
+git status --short --branch
+git log --oneline --decorate -5
+git rev-list --left-right --count main...origin/main
+```
 
 ## 本机部署检查清单
 
