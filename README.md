@@ -2,6 +2,8 @@
 
 个人工作事务管理面板:按「重要性 × 是否有期限」把每天的任务摆进四象限,支持粘贴截图、历史回看、AI 拆任务草稿确认。
 
+项目背景见 [docs/architecture/background.md](docs/architecture/background.md):它记录了为什么这个工具要同时支持紧急排查线和重要建设线。
+
 ## 启动 / 停止
 
 需要先打开 Docker Desktop,然后在本目录执行:

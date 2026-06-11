@@ -2,6 +2,7 @@
 
 ## 模块划分
 
+- `docs/architecture/background.md` 记录项目来源、真实工作流痛点和核心产品目标。
 - `frontend/src/App.tsx` 是单屏应用的状态容器，负责日期、主题、AI 草稿队列、删除确认和任务加载。
 - `frontend/src/components/QuadrantBoard.tsx` 负责四象限分组、排序、完成折叠和拖拽落点计算。
 - `frontend/src/components/TaskEditor.tsx` 负责新建 / 编辑、图片粘贴、上传删除、未保存关闭确认和任务删除。
