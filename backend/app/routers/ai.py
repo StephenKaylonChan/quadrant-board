@@ -1,0 +1,154 @@
+"""AI 拆任务:把一句自然语言变成一个或多个任务草稿。
+
+只负责"拆解",不直接写数据库——草稿返回给前端,
+用户确认后走普通的 POST /api/tasks 入库,方便人工把关 AI 的打分。
+"""
+import json
+from datetime import date
+
+import httpx
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
+from ..config import CHAT_MODEL, LLM_API_KEY, LLM_BASE_URL
+
+router = APIRouter(tags=["ai"])
+
+SYSTEM_PROMPT = """你是任务管理助手。把用户输入拆成 1 个或多个待办任务。
+
+每个任务做三个判断:
+
+1. important(重要吗,true/false):看影响大小——线上故障、影响客户或用户、关键功能 -> true;例行回复、琐事 -> false
+
+2. due_date(哪天截止,YYYY-MM-DD 或 null):
+- 「马上 / 今天 / 尽快 / 很急」 -> 今天的日期
+- 「明天」 -> 明天的日期;「周五前 / 下周三」 -> 按今天的日期换算成具体日期
+- 排查、修复、回复这类事,没提时限 -> 默认今天
+- 梳理、学习、优化、探索这类没有死线的事,没提时限 -> null(无期限)
+
+3. status(状态),以用户原话为准:
+- 提到「待 Review / 已提交 PR / 等审核 / 等人看」 -> "review"
+- 提到「正在做 / 排查中 / 进行中」 -> "doing"
+- 提到「已完成 / 做完了 / 已解决」 -> "done"
+- 没提就是 "todo"
+
+title(标题)的写法:
+- 高度概括"发生了什么 / 要做什么",关键现象要列举出来;15~25 字为宜,不追求极简
+- 时间点、具体数值、复现条件这类细节一律不进标题,放进 description
+- 范例:输入「系统在21:38后出现追问、返回'无'、乱码等BUG,需定位根因」
+  好标题:「系统出现追问、乱码、返回异常等BUG」
+  坏标题:「排查21:38后待办发送异常」(细节挤进标题,现象列举反而丢了)
+
+description(备注)的写法:
+- 承接全部细节:时间点、现象清单、线索、目标;用户口述重复、凌乱时,整理通顺再写,但不要丢信息
+- 上面范例的备注应类似:「21:38 后开始出现;现象:重复追问、返回'无'、乱码;需要定位根因」
+- 确实没有细节就给空字符串
+
+输出严格的 JSON 数组,不要任何多余文字、不要代码块标记,每个元素形如:
+{"title": "...", "description": "...", "important": true, "due_date": "2026-06-11", "status": "todo"}"""
+
+WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
+
+
+class ParseIn(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+
+
+VALID_STATUS = {"todo", "doing", "review", "done"}
+
+
+class TaskDraft(BaseModel):
+    title: str
+    description: str = ""
+    important: bool = True
+    due_date: str | None = None  # YYYY-MM-DD,null = 无期限
+    status: str = "todo"
+
+
+@router.get("/ai/status")
+async def ai_status():
+    """前端用这个判断要不要显示 AI 输入框。"""
+    return {"enabled": bool(LLM_BASE_URL and LLM_API_KEY)}
+
+
+@router.post("/ai/parse-task", response_model=list[TaskDraft])
+async def parse_task(payload: ParseIn):
+    if not (LLM_BASE_URL and LLM_API_KEY):
+        raise HTTPException(status_code=503, detail="后端未配置 LLM_BASE_URL / LLM_API_KEY")
+
+    # 把今天的日期喂给模型,它才能把"明天/周五前"换算成具体日期
+    today = date.today()
+    date_context = f"\n\n今天是 {today.isoformat()},周{WEEKDAY_CN[today.weekday()]}。"
+    body = {
+        "model": CHAT_MODEL,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT + date_context},
+            {"role": "user", "content": payload.text},
+        ],
+        "temperature": 0.3,  # 判断类任务要稳定,温度调低
+    }
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"{LLM_BASE_URL.rstrip('/')}/chat/completions",
+                headers={"Authorization": f"Bearer {LLM_API_KEY}"},
+                json=body,
+            )
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"连不上大模型服务:{exc}") from exc
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"大模型调用失败:HTTP {resp.status_code}")
+
+    content = resp.json()["choices"][0]["message"]["content"]
+    drafts = _parse_drafts(content)
+    if not drafts:
+        raise HTTPException(status_code=502, detail="AI 没能拆出任务,换个说法再试试")
+    return drafts
+
+
+def _normalize_due(value: object) -> str | None:
+    """截止日期容错:合法的 YYYY-MM-DD 原样保留,空值算无期限,格式坏了按默认今天。"""
+    if value in (None, "", "null"):
+        return None
+    try:
+        return date.fromisoformat(str(value)).isoformat()
+    except ValueError:
+        return date.today().isoformat()
+
+
+def _parse_drafts(content: str) -> list[TaskDraft]:
+    """容错解析模型输出:剥掉可能的 ```json 代码块,逐条校验。"""
+    text = content.strip()
+    if text.startswith("```"):
+        text = text.strip("`").strip()
+        if text.startswith("json"):
+            text = text[4:]
+    try:
+        data = json.loads(text.strip())
+    except json.JSONDecodeError:
+        return []
+
+    if isinstance(data, dict):
+        data = [data]  # 模型偶尔只回一个对象而不是数组
+    if not isinstance(data, list):
+        return []
+
+    drafts: list[TaskDraft] = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title", "")).strip()
+        if not title:
+            continue
+        status = str(item.get("status", "todo")).strip().lower()
+        drafts.append(
+            TaskDraft(
+                title=title[:200],
+                description=str(item.get("description") or ""),
+                important=bool(item.get("important", True)),
+                due_date=_normalize_due(item.get("due_date")),
+                status=status if status in VALID_STATUS else "todo",
+            )
+        )
+    return drafts
