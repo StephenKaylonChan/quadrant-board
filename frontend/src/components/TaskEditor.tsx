@@ -390,7 +390,7 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
               }}
             />
           </div>
-          <p className="paste-hint">截图后 Ctrl / Cmd + V 直接粘贴;点图片放大,预览里右键复制</p>
+          <p className="paste-hint">截图后 Ctrl / Cmd + V 直接粘贴;点图片放大,预览里可点按钮复制</p>
         </div>
 
         {lightbox && <Lightbox url={lightbox} onClose={() => setLightbox(null)} />}

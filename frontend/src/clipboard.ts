@@ -20,11 +20,27 @@ async function imageToPngBlob(url: string): Promise<Blob> {
 function normalizeClipboardError(err: unknown): Error {
   if (err instanceof Error) {
     if (err.name === 'NotAllowedError' || /not allowed|permission/i.test(err.message)) {
-      return new Error('浏览器拒绝写入剪贴板,请点复制按钮后重试或检查剪贴板权限')
+      return new Error('浏览器拒绝写入剪贴板,可右键图片选择复制图片')
     }
     return err
   }
   return new Error('复制失败:浏览器不支持或没给剪贴板权限')
+}
+
+export function prepareImageForClipboard(url: string): Promise<Blob> {
+  return imageToPngBlob(url)
+}
+
+export async function copyPreparedImageToClipboard(pngBlob: Blob): Promise<void> {
+  if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+    throw new Error('当前浏览器不支持复制图片到剪贴板')
+  }
+
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })])
+  } catch (err) {
+    throw normalizeClipboardError(err)
+  }
 }
 
 // 把一张图片复制进系统剪贴板。
@@ -40,7 +56,8 @@ export async function copyImageToClipboard(url: string): Promise<void> {
     await navigator.clipboard.write([
       new ClipboardItem({ 'image/png': imageToPngBlob(url) }),
     ])
-  } catch (err) {
-    throw normalizeClipboardError(err)
+  } catch {
+    const prepared = await prepareImageForClipboard(url)
+    await copyPreparedImageToClipboard(prepared)
   }
 }

@@ -49,7 +49,7 @@ docker compose exec frontend npm run smoke:api # 基础接口冒烟检查
 
 ## 交互约束
 
-- 图片卡片缩略图点击 = 复制剪贴板；弹窗点图 = 自制灯箱；灯箱复制按钮和右键 = 复制。
+- 图片卡片缩略图点击 = 复制剪贴板；弹窗点图 = 自制灯箱；灯箱复制按钮走剪贴板 API，右键保留浏览器原生复制菜单兜底。
 - 删除任务 MUST 二次确认，MUST 使用 App 层 `confirm-layer`，MUST NOT 用 `window.confirm`。
 - 编辑弹窗点外部时，有未保存内容 MUST 弹「保存 / 不保存 / 继续编辑」三选一。
 - 主题 MUST 使用 CSS 变量；深色在 `[data-theme='dark']` 整组覆盖，MUST NOT 写死大面积深彩色块。
