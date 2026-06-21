@@ -1,8 +1,9 @@
 import { STATUS_META } from './statusMeta'
-import type { Task } from './types'
+import type { Task, TaskStatus } from './types'
 
 export type BoardView = 'current' | 'review' | 'archive'
 export type ScopeFilter = 'all' | 'important' | 'normal' | 'dated' | 'undated'
+export type StatusFilter = 'all' | TaskStatus
 
 export const BOARD_VIEW_LABEL: Record<BoardView, string> = {
   current: '当前',
@@ -20,6 +21,15 @@ export const SCOPE_FILTERS: { key: ScopeFilter; label: string }[] = [
   { key: 'undated', label: '无期限' },
 ]
 
+export const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: 'all', label: '全部状态' },
+  { key: 'doing', label: STATUS_META.doing.label },
+  { key: 'verify', label: STATUS_META.verify.label },
+  { key: 'todo', label: STATUS_META.todo.label },
+  { key: 'review', label: STATUS_META.review.label },
+  { key: 'done', label: STATUS_META.done.label },
+]
+
 export function tasksForView(source: Task[], view: BoardView): Task[] {
   if (view === 'review') return source.filter((task) => task.status === 'review')
   if (view === 'archive') return source.filter((task) => task.status === 'done')
@@ -34,12 +44,28 @@ export function countByView(source: Task[]): Record<BoardView, number> {
   }
 }
 
+export function countTodaySummary(source: Task[], today: string) {
+  const active = tasksForView(source, 'current')
+  return {
+    active: active.length,
+    overdue: active.filter((task) => task.due_date !== null && task.due_date < today).length,
+    dueToday: active.filter((task) => task.due_date === today).length,
+    verify: active.filter((task) => task.status === 'verify').length,
+    review: tasksForView(source, 'review').length,
+    doneToday: source.filter((task) => task.completed_date === today).length,
+  }
+}
+
 export function matchScope(task: Task, scope: ScopeFilter): boolean {
   if (scope === 'important') return task.important
   if (scope === 'normal') return !task.important
   if (scope === 'dated') return task.due_date !== null
   if (scope === 'undated') return task.due_date === null
   return true
+}
+
+export function matchStatus(task: Task, status: StatusFilter): boolean {
+  return status === 'all' || task.status === status
 }
 
 export function matchSearch(task: Task, keyword: string): boolean {

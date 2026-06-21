@@ -19,6 +19,12 @@ export interface WeekReview {
   overdue: Task[]
   importantActive: Task[]
   focus: Task[]
+  days: {
+    date: string
+    created: number
+    completed: number
+    active: number
+  }[]
 }
 
 function inRange(date: string | null, start: string, end: string): boolean {
@@ -76,6 +82,12 @@ export function buildWeekReview(days: WeekReviewDay[]): WeekReview {
       ...verify,
       ...importantActive.filter((task) => task.status === 'doing'),
     ]).slice(0, 8),
+    days: days.map((day) => ({
+      date: day.date,
+      created: day.tasks.filter((task) => task.created_date === day.date).length,
+      completed: day.tasks.filter((task) => task.completed_date === day.date).length,
+      active: tasksForView(day.tasks, 'current').length,
+    })),
   }
 }
 
@@ -96,6 +108,8 @@ export function buildWeekReviewText(review: WeekReview): string {
   ]
 
   lines.push(...(review.focus.length > 0 ? review.focus.map(taskLine) : ['- 暂无']))
+  lines.push('', '## 每日节奏')
+  lines.push(...review.days.map((day) => `- ${day.date}:新增 ${day.created},完成 ${day.completed},待处理 ${day.active}`))
   lines.push('', '## 本周完成')
   lines.push(...(review.completed.length > 0 ? review.completed.map(taskLine) : ['- 暂无']))
   lines.push('', '## 待 Review')

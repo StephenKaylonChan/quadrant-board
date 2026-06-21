@@ -348,6 +348,32 @@ button:disabled {
 .filter-clear {
   flex: 0 0 auto;
 }
+.summary-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px 0 34px;
+  overflow-x: auto;
+}
+.summary-strip span {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 76px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink-soft);
+  background: var(--surface);
+  font-size: 12px;
+}
+.summary-strip b {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1;
+}
 
 /* "关闭前是否保存"的小确认框,盖在编辑弹窗上面 */
 .confirm-layer {
@@ -568,6 +594,10 @@ button:disabled {
   transform: translateY(-1px);
   border-color: var(--status-border);
   box-shadow: inset 0 0 0 1px var(--status-border), 0 6px 16px var(--card-shadow);
+}
+.card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .card:active {
   cursor: grabbing;
@@ -1117,6 +1147,33 @@ input[type='date'] {
   font-family: var(--font-display);
   font-size: 16px;
 }
+.review-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.review-days span {
+  min-width: 0;
+  padding: 8px 6px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--input-bg);
+}
+.review-days b,
+.review-days em {
+  display: block;
+  font-style: normal;
+  text-align: center;
+}
+.review-days b {
+  color: var(--ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.review-days em {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
 .review-section ul {
   margin: 0;
   padding: 0;
@@ -1178,7 +1235,8 @@ input[type='date'] {
     overflow-x: auto;
   }
   .ai-area,
-  .filter-bar {
+  .filter-bar,
+  .summary-strip {
     padding-left: 16px;
     padding-right: 16px;
   }
@@ -1213,6 +1271,9 @@ input[type='date'] {
   .review-section li span {
     display: block;
     margin-top: 2px;
+  }
+  .review-days {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .q-head {
     flex-wrap: wrap;

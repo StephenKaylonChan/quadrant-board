@@ -1,5 +1,12 @@
 import { STATUS_META, SYNC_STATUS_ORDER } from './statusMeta'
-import { BOARD_VIEW_LABEL, SCOPE_FILTERS, type BoardView, type ScopeFilter } from './taskViews'
+import {
+  BOARD_VIEW_LABEL,
+  SCOPE_FILTERS,
+  STATUS_FILTERS,
+  type BoardView,
+  type ScopeFilter,
+  type StatusFilter,
+} from './taskViews'
 import type { Task, TaskStatus } from './types'
 
 function firstDescLine(task: Task): string {
@@ -67,14 +74,17 @@ export function buildBoardExport(
   view: BoardView,
   searchText: string,
   scopeFilter: ScopeFilter,
+  statusFilter: StatusFilter,
 ): string {
   const scopeLabel = SCOPE_FILTERS.find((item) => item.key === scopeFilter)?.label ?? '全部'
+  const statusLabel = STATUS_FILTERS.find((item) => item.key === statusFilter)?.label ?? '全部状态'
   const lines = [
     `# 每日四象限导出 - ${boardDate}`,
     '',
     `- 日期：${boardDate} 周${weekday}`,
     `- 视图：${BOARD_VIEW_LABEL[view]}`,
     `- 范围：${scopeLabel}`,
+    `- 状态：${statusLabel}`,
     `- 搜索：${searchText.trim() || '无'}`,
     `- 任务：${visibleTasks.length} / ${allViewCount}`,
     '',

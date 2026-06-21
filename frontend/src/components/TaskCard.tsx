@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react'
+import type { DragEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 import { imageUrl } from '../api'
 import { copyImageToClipboard } from '../clipboard'
 import { dueLabel } from '../dates'
@@ -60,6 +60,12 @@ export default function TaskCard({
     window.setTimeout(() => setCopyTip(null), 1600)
   }
 
+  function handleKeyDown(e: KeyboardEvent<HTMLElement>) {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    e.preventDefault()
+    onClick()
+  }
+
   const due = dueLabel(task.due_date)
   const statusMeta = STATUS_META[task.status]
   const dropClass = dropSide === null || dragging || !draggable ? '' : ` card-drop-${dropSide}`
@@ -69,7 +75,11 @@ export default function TaskCard({
     <article
       className={`card card-${task.status}${overdueClass}${dragging ? ' card-dragging' : ''}${!draggable ? ' card-static' : ''}${dropClass}`}
       draggable={draggable}
+      role="button"
+      tabIndex={0}
+      aria-label={`打开任务:${task.title}`}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       onDragStart={(e) => {
         if (!draggable) return
         e.dataTransfer.effectAllowed = 'move'

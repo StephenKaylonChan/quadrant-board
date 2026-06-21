@@ -13,12 +13,16 @@ import {
   BOARD_VIEW_LABEL,
   BOARD_VIEW_ORDER,
   SCOPE_FILTERS,
+  STATUS_FILTERS,
   countByView,
+  countTodaySummary,
   matchScope,
   matchSearch,
+  matchStatus,
   tasksForView,
   type BoardView,
   type ScopeFilter,
+  type StatusFilter,
 } from './taskViews'
 import type { Task } from './types'
 
@@ -52,6 +56,7 @@ export default function App() {
   const [boardView, setBoardView] = useState<BoardView>('current')
   const [searchText, setSearchText] = useState('')
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [exported, setExported] = useState(false)
   const [weekReview, setWeekReview] = useState<WeekReview | null>(null)
   const [weekBusy, setWeekBusy] = useState(false)
@@ -170,6 +175,7 @@ export default function App() {
         boardView,
         searchText,
         scopeFilter,
+        statusFilter,
       )
       downloadTextFile(`quadrant-board-${boardDate}-${boardView}.md`, content)
       setExported(true)
@@ -228,6 +234,7 @@ export default function App() {
       e.preventDefault()
       setSearchText('')
       setScopeFilter('all')
+      setStatusFilter('all')
       searchInputRef.current?.blur()
     }
   }, editor === null && draftQueue.length === 0 && deleting === null && syncDraft === '' && weekReview === null)
@@ -235,15 +242,20 @@ export default function App() {
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]
   const normalizedSearch = searchText.trim().toLowerCase()
-  const filterActive = normalizedSearch !== '' || scopeFilter !== 'all'
+  const filterActive = normalizedSearch !== '' || scopeFilter !== 'all' || statusFilter !== 'all'
   const filteredTasks = useMemo(
-    () => tasks.filter((task) => matchScope(task, scopeFilter) && matchSearch(task, normalizedSearch)),
-    [normalizedSearch, scopeFilter, tasks],
+    () => tasks.filter(
+      (task) => matchScope(task, scopeFilter)
+        && matchStatus(task, statusFilter)
+        && matchSearch(task, normalizedSearch),
+    ),
+    [normalizedSearch, scopeFilter, statusFilter, tasks],
   )
   const boardViewCounts = useMemo(() => countByView(tasks), [tasks])
   const filteredBoardViewCounts = useMemo(() => countByView(filteredTasks), [filteredTasks])
   const tabCounts = filterActive ? filteredBoardViewCounts : boardViewCounts
   const visibleViewTasks = useMemo(() => tasksForView(filteredTasks, boardView), [boardView, filteredTasks])
+  const todaySummary = useMemo(() => countTodaySummary(tasks, boardDate), [boardDate, tasks])
 
   return (
     <div className="app">
@@ -372,6 +384,18 @@ export default function App() {
             </button>
           ))}
         </div>
+        <div className="seg seg-sm filter-status" role="group" aria-label="状态筛选">
+          {STATUS_FILTERS.map((filter) => (
+            <button
+              key={filter.key}
+              type="button"
+              className={statusFilter === filter.key ? 'on' : ''}
+              onClick={() => setStatusFilter(filter.key)}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
         <span className="filter-count">
           显示 {filteredBoardViewCounts[boardView]} / {boardViewCounts[boardView]}
         </span>
@@ -382,6 +406,7 @@ export default function App() {
             onClick={() => {
               setSearchText('')
               setScopeFilter('all')
+              setStatusFilter('all')
             }}
           >
             清空筛选
@@ -391,6 +416,14 @@ export default function App() {
       {filterActive && boardView === 'current' && (
         <div className="hint-bar">筛选中暂不支持拖拽排序,清空筛选后再调整顺序</div>
       )}
+      <section className="summary-strip" aria-label="当日概览">
+        <span><b>{todaySummary.active}</b>待处理</span>
+        <span><b>{todaySummary.overdue}</b>过期</span>
+        <span><b>{todaySummary.dueToday}</b>今日截止</span>
+        <span><b>{todaySummary.verify}</b>待验证</span>
+        <span><b>{todaySummary.review}</b>待 Review</span>
+        <span><b>{todaySummary.doneToday}</b>今日归档</span>
+      </section>
 
       <QuadrantBoard
         tasks={filteredTasks}
@@ -473,6 +506,19 @@ export default function App() {
               <div className="review-stat"><b>{weekReview.verify.length}</b><span>待验证</span></div>
               <div className="review-stat"><b>{weekReview.overdue.length}</b><span>已过期</span></div>
             </div>
+
+            <section className="review-section">
+              <h3>每日节奏</h3>
+              <div className="review-days">
+                {weekReview.days.map((day) => (
+                  <span key={day.date}>
+                    <b>{day.date.slice(5)}</b>
+                    <em>+{day.created}</em>
+                    <em>✓{day.completed}</em>
+                  </span>
+                ))}
+              </div>
+            </section>
 
             <section className="review-section">
               <h3>收口重点</h3>
