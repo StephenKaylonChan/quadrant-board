@@ -45,6 +45,27 @@ def test_parse_limit_and_bad_status() -> None:
     assert len(drafts[0].description) == 2000
 
 
+def test_parse_nested_tasks_and_alias_fields() -> None:
+    payload = {
+        "tasks": [
+            {
+                "name": "核对 AI 草稿质量",
+                "content": "确认别名字段也能解析",
+                "is_important": "是",
+                "deadline": None,
+                "status": "verify",
+            }
+        ]
+    }
+    drafts = _parse_drafts(json.dumps(payload, ensure_ascii=False))
+    assert len(drafts) == 1
+    assert drafts[0].title == "核对 AI 草稿质量"
+    assert drafts[0].description == "确认别名字段也能解析"
+    assert drafts[0].important is True
+    assert drafts[0].due_date is None
+    assert drafts[0].status == "verify"
+
+
 def test_build_user_content_with_existing_titles() -> None:
     content = _build_user_content(
         "继续优化 AI 拆任务",
@@ -60,6 +81,7 @@ def main() -> None:
     test_bool_string()
     test_parse_single_object_and_fence()
     test_parse_limit_and_bad_status()
+    test_parse_nested_tasks_and_alias_fields()
     test_build_user_content_with_existing_titles()
     print("ai parser tests passed")
 

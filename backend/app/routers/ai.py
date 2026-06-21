@@ -236,7 +236,8 @@ def _parse_drafts(content: str) -> list[TaskDraft]:
         return []
 
     if isinstance(data, dict):
-        data = [data]  # 模型偶尔只回一个对象而不是数组
+        nested = data.get("tasks") or data.get("items")
+        data = nested if isinstance(nested, list) else [data]  # 模型偶尔只回一个对象而不是数组
     if not isinstance(data, list):
         return []
 
@@ -246,16 +247,16 @@ def _parse_drafts(content: str) -> list[TaskDraft]:
             break
         if not isinstance(item, dict):
             continue
-        title = str(item.get("title", "")).strip()
+        title = str(item.get("title") or item.get("name") or "").strip()
         if not title:
             continue
         status = str(item.get("status", "todo")).strip().lower()
         drafts.append(
             TaskDraft(
                 title=title[:200],
-                description=str(item.get("description") or "")[:2000],
-                important=_normalize_important(item.get("important", True)),
-                due_date=_normalize_due(item.get("due_date")),
+                description=str(item.get("description") or item.get("content") or item.get("detail") or "")[:2000],
+                important=_normalize_important(item.get("important", item.get("is_important", True))),
+                due_date=_normalize_due(item.get("due_date", item.get("deadline"))),
                 status=status if status in VALID_STATUS else "todo",
             )
         )
