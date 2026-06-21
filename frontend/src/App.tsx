@@ -35,10 +35,16 @@ const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 type ThemeMode = 'light' | 'dark' | 'system'
 const THEME_LABEL: Record<ThemeMode, string> = { light: '浅色', dark: '深色', system: '系统' }
 const THEME_KEY = 'qb-theme'
+const BOARD_VIEW_KEY = 'qb-board-view'
 
 function loadTheme(): ThemeMode {
   const saved = localStorage.getItem(THEME_KEY)
   return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system'
+}
+
+function loadBoardView(): BoardView {
+  const saved = localStorage.getItem(BOARD_VIEW_KEY)
+  return saved === 'current' || saved === 'review' || saved === 'archive' ? saved : 'current'
 }
 
 export default function App() {
@@ -58,7 +64,7 @@ export default function App() {
   const [deleting, setDeleting] = useState<Task | null>(null)
   const [syncDraft, setSyncDraft] = useState('')
   const [syncCopied, setSyncCopied] = useState(false)
-  const [boardView, setBoardView] = useState<BoardView>('current')
+  const [boardView, setBoardView] = useState<BoardView>(loadBoardView)
   const [searchText, setSearchText] = useState('')
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -92,6 +98,10 @@ export default function App() {
     media.addEventListener('change', apply)
     return () => media.removeEventListener('change', apply)
   }, [theme])
+
+  useEffect(() => {
+    localStorage.setItem(BOARD_VIEW_KEY, boardView)
+  }, [boardView])
 
   const load = useCallback(async () => {
     try {
@@ -129,6 +139,20 @@ export default function App() {
         await updateTask(task.id, { status })
       } catch (e) {
         setError(e instanceof Error ? e.message : '状态更新失败')
+      } finally {
+        void load()
+      }
+    },
+    [load],
+  )
+
+  const changeTaskDue = useCallback(
+    async (task: Task, dueDate: string | null) => {
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, due_date: dueDate } : t)))
+      try {
+        await updateTask(task.id, { due_date: dueDate })
+      } catch (e) {
+        setError(e instanceof Error ? e.message : '截止日期更新失败')
       } finally {
         void load()
       }
@@ -288,6 +312,11 @@ export default function App() {
         setBoardDate(today)
         return
       }
+      if (e.key === '1' || e.key === '2' || e.key === '3') {
+        e.preventDefault()
+        setBoardView(BOARD_VIEW_ORDER[Number(e.key) - 1])
+        return
+      }
     }
 
     if (e.key === '/' && !isTyping) {
@@ -369,12 +398,13 @@ export default function App() {
         </div>
 
         <div className="seg seg-sm board-view-switch" role="group" aria-label="任务视图切换">
-          {BOARD_VIEW_ORDER.map((view) => (
+          {BOARD_VIEW_ORDER.map((view, index) => (
             <button
               key={view}
               type="button"
               className={boardView === view ? 'on' : ''}
               onClick={() => setBoardView(view)}
+              title={String(index + 1)}
             >
               {BOARD_VIEW_LABEL[view]} {tabCounts[view]}
             </button>
@@ -576,6 +606,7 @@ export default function App() {
         onDelete={(t) => setDeleting(t)}
         onMove={moveTask}
         onStatusChange={changeTaskStatus}
+        onDueChange={changeTaskDue}
       />
 
       {deleting && (

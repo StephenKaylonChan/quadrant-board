@@ -20,6 +20,7 @@ interface Props {
   onDelete: (task: Task) => void
   onMove: (task: Task, patch: MovePatch) => void
   onStatusChange: (task: Task, status: TaskStatus) => void
+  onDueChange: (task: Task, dueDate: string | null) => void
 }
 
 interface QuadrantDef {
@@ -69,6 +70,7 @@ export default function QuadrantBoard({
   onDelete,
   onMove,
   onStatusChange,
+  onDueChange,
 }: Props) {
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [overQuad, setOverQuad] = useState<string | null>(null)
@@ -177,6 +179,7 @@ export default function QuadrantBoard({
                     onClick={() => onSelect(t)}
                     onDelete={() => onDelete(t)}
                     onStatusChange={canEditCurrent ? (status) => onStatusChange(t, status) : undefined}
+                    onDueChange={canEditCurrent ? (dueDate) => onDueChange(t, dueDate) : undefined}
                     onDragStart={() => setDraggingId(t.id)}
                     onDragEnd={() => {
                       setDraggingId(null)

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { DragEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 import { imageUrl } from '../api'
 import { copyImageToClipboard } from '../clipboard'
-import { dueLabel } from '../dates'
+import { addDays, dueLabel, todayStr } from '../dates'
 import { STATUS_META } from '../statusMeta'
 import type { Task, TaskImage, TaskStatus } from '../types'
 
@@ -15,6 +15,7 @@ interface Props {
   onClick: () => void
   onDelete: () => void // 点卡片上的 ×,由 App 弹二次确认
   onStatusChange?: (status: TaskStatus) => void
+  onDueChange?: (dueDate: string | null) => void
   onDragStart: () => void
   onDragEnd: () => void
   // 把别的卡片拖到这张卡上松手:after 表示插到这张卡的后面还是前面
@@ -30,6 +31,7 @@ export default function TaskCard({
   onClick,
   onDelete,
   onStatusChange,
+  onDueChange,
   onDragStart,
   onDragEnd,
   onDropOnCard,
@@ -76,6 +78,12 @@ export default function TaskCard({
     return null
   }
 
+  function nextDueAction(): { dueDate: string; label: string } {
+    const today = todayStr()
+    if (task.due_date === today) return { dueDate: addDays(today, 1), label: '明天' }
+    return { dueDate: today, label: '今天' }
+  }
+
   async function copyTaskText(e: ReactMouseEvent) {
     e.stopPropagation()
     const due = task.due_date ? ` / ${task.due_date}` : ''
@@ -92,6 +100,7 @@ export default function TaskCard({
   const due = dueLabel(task.due_date)
   const statusMeta = STATUS_META[task.status]
   const quickStatus = nextStatus()
+  const quickDue = nextDueAction()
   const dropClass = dropSide === null || dragging || !draggable ? '' : ` card-drop-${dropSide}`
   const overdueClass = due?.overdue ? ' card-overdue' : ''
 
@@ -174,6 +183,30 @@ export default function TaskCard({
             }}
           >
             {quickStatus.label}
+          </button>
+        )}
+        {onDueChange && (
+          <button
+            type="button"
+            className="mini-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDueChange(quickDue.dueDate)
+            }}
+          >
+            {quickDue.label}
+          </button>
+        )}
+        {onDueChange && task.due_date !== null && (
+          <button
+            type="button"
+            className="mini-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDueChange(null)
+            }}
+          >
+            清期限
           </button>
         )}
         <button type="button" className="mini-btn" onClick={(e) => void copyTaskText(e)}>
