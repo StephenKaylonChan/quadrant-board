@@ -1051,6 +1051,108 @@ input[type='date'] {
   font-family: inherit;
   line-height: 1.7;
 }
+.review-modal {
+  width: min(760px, 94vw);
+  max-height: calc(100vh - 48px);
+}
+.modal-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.modal-title-row h2 {
+  margin-bottom: 2px;
+}
+.modal-title-row p,
+.review-empty {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.review-total {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: var(--hint-bg);
+  font-size: 12px;
+}
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.review-stat {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
+}
+.review-stat b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.review-stat span {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.review-section {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.review-section + .review-section {
+  margin-top: 14px;
+}
+.review-section h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+.review-section ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.review-section li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px dashed var(--line);
+}
+.review-section li:first-child {
+  border-top: none;
+}
+.review-section li b {
+  min-width: 0;
+}
+.review-section li span {
+  flex: 0 0 auto;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.review-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.review-modal .modal-foot {
+  position: sticky;
+  bottom: -22px;
+  padding-top: 12px;
+  padding-bottom: 2px;
+  background: var(--modal-bg);
+  border-top: 1px solid var(--line);
+}
 .spacer {
   flex: 1;
 }
@@ -1101,6 +1203,16 @@ input[type='date'] {
   .filter-search {
     flex-basis: 100%;
     min-width: 0;
+  }
+  .review-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+  .review-section li {
+    display: block;
+  }
+  .review-section li span {
+    display: block;
+    margin-top: 2px;
   }
   .q-head {
     flex-wrap: wrap;

@@ -6,7 +6,9 @@ import QuadrantBoard, { type MovePatch } from './components/QuadrantBoard'
 import TaskEditor from './components/TaskEditor'
 import { addDays, todayStr } from './dates'
 import { useDocumentEvent } from './hooks/useDocumentEvent'
+import { STATUS_META } from './statusMeta'
 import { buildBoardExport, buildDailySync, downloadTextFile } from './taskReports'
+import { buildWeekReview, buildWeekReviewText, type WeekReview } from './taskReview'
 import {
   BOARD_VIEW_LABEL,
   BOARD_VIEW_ORDER,
@@ -51,6 +53,9 @@ export default function App() {
   const [searchText, setSearchText] = useState('')
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all')
   const [exported, setExported] = useState(false)
+  const [weekReview, setWeekReview] = useState<WeekReview | null>(null)
+  const [weekBusy, setWeekBusy] = useState(false)
+  const [weekCopied, setWeekCopied] = useState(false)
 
   // 后端配了大模型密钥才显示 AI 输入框
   useEffect(() => {
@@ -123,6 +128,37 @@ export default function App() {
     }
   }
 
+  async function openWeekReview() {
+    if (weekBusy) return
+    const dates = Array.from({ length: 7 }, (_, index) => addDays(boardDate, index - 6))
+    setWeekBusy(true)
+    setError('')
+    try {
+      const days = await Promise.all(
+        dates.map(async (date) => ({
+          date,
+          tasks: await fetchTasks(date),
+        })),
+      )
+      setWeekReview(buildWeekReview(days))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '生成周回顾失败')
+    } finally {
+      setWeekBusy(false)
+    }
+  }
+
+  async function copyWeekReview() {
+    if (!weekReview) return
+    try {
+      await navigator.clipboard.writeText(buildWeekReviewText(weekReview))
+      setWeekCopied(true)
+      window.setTimeout(() => setWeekCopied(false), 1200)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '复制周回顾失败')
+    }
+  }
+
   function downloadBoardExport() {
     try {
       const content = buildBoardExport(
@@ -163,8 +199,19 @@ export default function App() {
         e.preventDefault()
         void copySyncDraft()
       }
+      return
     }
-  }, deleting !== null || syncDraft !== '')
+    if (weekReview) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setWeekReview(null)
+      }
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        void copyWeekReview()
+      }
+    }
+  }, deleting !== null || syncDraft !== '' || weekReview !== null)
 
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]
@@ -243,6 +290,15 @@ export default function App() {
         >
           <span className="btn-icon" aria-hidden="true">↗</span>
           今日同步
+        </button>
+        <button
+          className="ghost-btn"
+          onClick={() => void openWeekReview()}
+          disabled={weekBusy}
+          title="查看截至当前日期的最近 7 天回顾"
+        >
+          <span className="btn-icon" aria-hidden="true">▦</span>
+          {weekBusy ? '生成中' : '周回顾'}
         </button>
         <button
           className="ghost-btn"
@@ -366,6 +422,87 @@ export default function App() {
                 {syncCopied ? '已复制' : '复制'}
               </button>
               <button type="button" className="ghost-btn" onClick={() => setSyncDraft('')}>
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {weekReview && (
+        <div className="overlay" onClick={() => setWeekReview(null)}>
+          <div
+            className="modal review-modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-title-row">
+              <div>
+                <h2>周回顾</h2>
+                <p>{weekReview.startDate} ~ {weekReview.endDate}</p>
+              </div>
+              <span className="review-total">涉及 {weekReview.total} 个任务</span>
+            </div>
+
+            <div className="review-grid">
+              <div className="review-stat"><b>{weekReview.created.length}</b><span>本周新增</span></div>
+              <div className="review-stat"><b>{weekReview.completed.length}</b><span>本周完成</span></div>
+              <div className="review-stat"><b>{weekReview.active.length}</b><span>当前待处理</span></div>
+              <div className="review-stat"><b>{weekReview.review.length}</b><span>待 Review</span></div>
+              <div className="review-stat"><b>{weekReview.verify.length}</b><span>待验证</span></div>
+              <div className="review-stat"><b>{weekReview.overdue.length}</b><span>已过期</span></div>
+            </div>
+
+            <section className="review-section">
+              <h3>收口重点</h3>
+              {weekReview.focus.length === 0 ? (
+                <p className="review-empty">暂无</p>
+              ) : (
+                <ul>
+                  {weekReview.focus.map((task) => (
+                    <li key={task.id}>
+                      <b>{task.title}</b>
+                      <span>{STATUS_META[task.status].label}{task.due_date ? ` / ${task.due_date}` : ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="review-section review-columns">
+              <div>
+                <h3>本周完成</h3>
+                {weekReview.completed.length === 0 ? (
+                  <p className="review-empty">暂无</p>
+                ) : (
+                  <ul>
+                    {weekReview.completed.slice(0, 6).map((task) => <li key={task.id}><b>{task.title}</b></li>)}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <h3>待 Review</h3>
+                {weekReview.review.length === 0 ? (
+                  <p className="review-empty">暂无</p>
+                ) : (
+                  <ul>
+                    {weekReview.review.slice(0, 6).map((task) => <li key={task.id}><b>{task.title}</b></li>)}
+                  </ul>
+                )}
+              </div>
+            </section>
+
+            <div className="modal-foot">
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={() => void copyWeekReview()}
+                title="Ctrl / Cmd + Enter"
+              >
+                {weekCopied ? '已复制' : '复制回顾'}
+              </button>
+              <button type="button" className="ghost-btn" onClick={() => setWeekReview(null)}>
                 关闭
               </button>
             </div>
