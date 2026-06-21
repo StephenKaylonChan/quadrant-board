@@ -391,8 +391,15 @@ button:focus-visible {
   color: var(--accent-deep);
   background: var(--hint-bg);
 }
-.ai-error {
+.ai-error-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 6px;
+}
+.ai-error {
+  margin: 0;
+  flex: 1;
 }
 .ai-feedback {
   margin: 6px 0 0;
@@ -1747,6 +1754,12 @@ input[type='date'] {
   }
   .ai-bar {
     flex-wrap: wrap;
+  }
+  .ai-error-row {
+    flex-wrap: wrap;
+  }
+  .ai-error-row .ai-error {
+    flex-basis: 100%;
   }
   .ai-bar .ai-input {
     min-width: 0;

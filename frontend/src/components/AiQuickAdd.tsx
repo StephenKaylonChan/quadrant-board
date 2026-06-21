@@ -45,6 +45,12 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [] }: Pro
     setNotice('')
   }
 
+  function clearInput() {
+    setText('')
+    setError('')
+    setNotice('')
+  }
+
   async function parse() {
     const prompt = text.trim()
     if (!prompt || busy) return
@@ -110,7 +116,17 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [] }: Pro
           </button>
         ))}
       </div>
-      {error && <p className="error-text ai-error">{error}</p>}
+      {error && (
+        <div className="ai-error-row" role="alert">
+          <p className="error-text ai-error">{error}</p>
+          <button type="button" className="ghost-btn" onClick={() => void parse()} disabled={busy || !text.trim()}>
+            重试
+          </button>
+          <button type="button" className="ghost-btn" onClick={clearInput} disabled={busy}>
+            清空
+          </button>
+        </div>
+      )}
       {notice && <p className="ai-feedback" aria-live="polite">{notice}</p>}
     </div>
   )
