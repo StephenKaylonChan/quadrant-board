@@ -8,7 +8,14 @@ import TaskEditor from './components/TaskEditor'
 import { addDays, todayStr } from './dates'
 import { useDocumentEvent } from './hooks/useDocumentEvent'
 import { STATUS_META } from './statusMeta'
-import { buildBoardExport, buildBoardJsonExport, buildDailySync, downloadJsonFile, downloadTextFile } from './taskReports'
+import {
+  buildAiReviewPrompt,
+  buildBoardExport,
+  buildBoardJsonExport,
+  buildDailySync,
+  downloadJsonFile,
+  downloadTextFile,
+} from './taskReports'
 import { buildWeekReview, buildWeekReviewText, type WeekReview } from './taskReview'
 import {
   BOARD_VIEW_LABEL,
@@ -429,6 +436,20 @@ export default function App() {
   const filteredBoardViewCounts = useMemo(() => countByView(filteredTasks), [filteredTasks])
   const tabCounts = filterActive ? filteredBoardViewCounts : boardViewCounts
   const visibleViewTasks = useMemo(() => tasksForView(filteredTasks, boardView), [boardView, filteredTasks])
+  const aiReviewPrompt = useMemo(
+    () => visibleViewTasks.length > 0
+      ? buildAiReviewPrompt(
+        visibleViewTasks,
+        boardDate,
+        boardView,
+        searchText,
+        scopeFilter,
+        statusFilter,
+        focusFilter,
+      )
+      : '',
+    [boardDate, boardView, focusFilter, scopeFilter, searchText, statusFilter, visibleViewTasks],
+  )
   const todaySummary = useMemo(() => countTodaySummary(tasks, boardDate), [boardDate, tasks])
   const focusQueue = useMemo(() => buildFocusQueue(tasks, boardDate), [boardDate, tasks])
   const aiExistingTitles = useMemo(
@@ -609,6 +630,7 @@ export default function App() {
         <AiQuickAdd
           model={aiModel}
           existingTitles={aiExistingTitles}
+          reviewPrompt={aiReviewPrompt}
           onDrafts={(drafts) => {
             setDraftQueue(drafts)
             setDraftHistory([])

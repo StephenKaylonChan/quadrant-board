@@ -7,6 +7,7 @@ interface Props {
   onDrafts: (drafts: TaskDraft[]) => void
   model?: string
   existingTitles?: string[]
+  reviewPrompt?: string
 }
 
 const AI_RECENT_KEY = 'qb-ai-recent-prompts'
@@ -26,7 +27,7 @@ function loadRecentPrompts(): string[] {
 }
 
 // AI 快捷新建:一句话 -> 草稿 -> 预填编辑窗确认后入库
-export default function AiQuickAdd({ onDrafts, model, existingTitles = [] }: Props) {
+export default function AiQuickAdd({ onDrafts, model, existingTitles = [], reviewPrompt }: Props) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -108,6 +109,11 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [] }: Pro
         </button>
       </div>
       <div className="ai-suggestions" aria-label="AI 输入快捷项">
+        {reviewPrompt && (
+          <button type="button" onClick={() => usePrompt(reviewPrompt)} disabled={busy}>
+            当前筛选复盘
+          </button>
+        )}
         {AI_TEMPLATES.map((item) => (
           <button key={item} type="button" onClick={() => usePrompt(item)} disabled={busy}>
             {item}

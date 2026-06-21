@@ -70,6 +70,19 @@ try {
   assert(parsed.tasks.length === 3, 'JSON 导出任务数量错误')
   assert(parsed.count.view_total === 3, 'JSON 导出视图总数错误')
 
+  const reviewPrompt = taskReports.buildAiReviewPrompt(
+    tasks,
+    today,
+    'current',
+    '异常',
+    'important',
+    'doing',
+    'overdue',
+  )
+  assert(reviewPrompt.includes('当前复盘'), 'AI 复盘提示应包含视图复盘目标')
+  assert(reviewPrompt.includes('搜索=异常'), 'AI 复盘提示应包含搜索条件')
+  assert(reviewPrompt.includes('[进行中] 任务 4'), 'AI 复盘提示应包含任务状态和标题')
+
   const permissionError = new Error('not allowed by browser')
   permissionError.name = 'NotAllowedError'
   assert(

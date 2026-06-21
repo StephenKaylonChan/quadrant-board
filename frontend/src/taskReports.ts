@@ -189,6 +189,46 @@ export function buildBoardJsonExport(
   )
 }
 
+export function buildAiReviewPrompt(
+  visibleTasks: Task[],
+  boardDate: string,
+  view: BoardView,
+  searchText: string,
+  scopeFilter: ScopeFilter,
+  statusFilter: StatusFilter,
+  focusFilter: FocusFilter,
+): string {
+  const scopeLabel = SCOPE_FILTERS.find((item) => item.key === scopeFilter)?.label ?? '全部'
+  const statusLabel = STATUS_FILTERS.find((item) => item.key === statusFilter)?.label ?? '全部状态'
+  const lines = [
+    `请基于下面这些任务,帮我做一次 ${boardDate} 的${BOARD_VIEW_LABEL[view]}复盘。`,
+    '',
+    '要求:',
+    '- 总结当前主要压力来源和最应该先收口的事项',
+    '- 找出可以合并、延后或拆小的任务',
+    '- 最后输出 3 条明天/下一步行动建议',
+    '',
+    `筛选条件:范围=${scopeLabel},状态=${statusLabel},重点=${FOCUS_FILTER_LABEL[focusFilter]},搜索=${searchText.trim() || '无'}`,
+    '',
+    '任务:',
+  ]
+
+  visibleTasks.slice(0, 20).forEach((task, index) => {
+    const due = task.due_date ? `截止 ${task.due_date}` : '无期限'
+    const desc = firstDescLine(task)
+    lines.push(
+      `${index + 1}. [${STATUS_META[task.status].label}] ${task.title}(${task.important ? '重要' : '不重要'},${due})`,
+    )
+    if (desc) lines.push(`   备注:${desc}`)
+  })
+
+  if (visibleTasks.length > 20) {
+    lines.push(`...另有 ${visibleTasks.length - 20} 条未列出,请按已列任务先总结主要模式。`)
+  }
+
+  return lines.join('\n')
+}
+
 function downloadFile(filename: string, content: string, type: string) {
   const blob = new Blob([content], { type })
   const url = URL.createObjectURL(blob)
