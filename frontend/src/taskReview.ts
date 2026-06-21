@@ -18,6 +18,7 @@ export interface WeekReview {
   verify: Task[]
   overdue: Task[]
   importantActive: Task[]
+  netChange: number
   focus: Task[]
   days: {
     date: string
@@ -65,18 +66,21 @@ export function buildWeekReview(days: WeekReviewDay[]): WeekReview {
   const verify = active.filter((task) => task.status === 'verify')
   const overdue = active.filter((task) => task.due_date !== null && task.due_date < endDate)
   const importantActive = active.filter((task) => task.important)
+  const created = allTasks.filter((task) => inRange(task.created_date, startDate, endDate))
+  const completed = allTasks.filter((task) => inRange(task.completed_date, startDate, endDate))
 
   return {
     startDate,
     endDate,
     total: allTasks.length,
-    created: allTasks.filter((task) => inRange(task.created_date, startDate, endDate)),
-    completed: allTasks.filter((task) => inRange(task.completed_date, startDate, endDate)),
+    created,
+    completed,
     active,
     review,
     verify,
     overdue,
     importantActive,
+    netChange: created.length - completed.length,
     focus: uniqueInOrder([
       ...overdue,
       ...verify,
@@ -103,6 +107,7 @@ export function buildWeekReviewText(review: WeekReview): string {
     `- 待验证：${review.verify.length}`,
     `- 已过期：${review.overdue.length}`,
     `- 当前重要任务：${review.importantActive.length}`,
+    `- 本周净变化：${review.netChange >= 0 ? '+' : ''}${review.netChange}`,
     '',
     '## 收口重点',
   ]

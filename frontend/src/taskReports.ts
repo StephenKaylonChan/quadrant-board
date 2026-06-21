@@ -5,6 +5,7 @@ import {
   SCOPE_FILTERS,
   STATUS_FILTERS,
   buildFocusQueue,
+  tasksForView,
   type BoardView,
   type FocusFilter,
   type ScopeFilter,
@@ -33,11 +34,15 @@ export function buildDailySync(tasks: Task[], today: string, weekday: string): s
   const byStatus = (status: TaskStatus) => tasks.filter((task) => task.status === status)
   const lines: string[] = [`今日待办同步（${today} 周${weekday}）：`, '', '总体：']
   const focusQueue = buildFocusQueue(tasks, today, 5)
+  const active = tasksForView(tasks, 'current')
+  const overdue = active.filter((task) => task.due_date !== null && task.due_date < today).length
+  const dueToday = active.filter((task) => task.due_date === today).length
 
   for (const status of SYNC_STATUS_ORDER) {
     const meta = STATUS_META[status]
     lines.push(`- ${meta.icon} ${meta.syncSummary}：${byStatus(status).length} 个`)
   }
+  lines.push(`- 风险：过期 ${overdue} 个，今日截止 ${dueToday} 个`)
 
   lines.push('', '收口建议：')
   lines.push(...(focusQueue.length > 0
@@ -65,6 +70,7 @@ function formatExportTask(task: Task, index: number, boardDate: string): string[
     `${index}. [${checkbox}] ${task.title}`,
     `   - 状态：${STATUS_META[task.status].label}`,
     `   - 范围：${task.important ? '重要' : '不重要'} / ${due}`,
+    `   - 创建：${task.created_date}${task.completed_date ? ` / 完成：${task.completed_date}` : ''}`,
   ]
   if (task.description.trim()) {
     lines.push(`   - 备注：${task.description.trim().replace(/\r?\n/g, '\n     ')}`)

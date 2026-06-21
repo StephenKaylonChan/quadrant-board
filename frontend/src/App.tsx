@@ -680,6 +680,7 @@ export default function App() {
               <div className="review-stat"><b>{weekReview.review.length}</b><span>待 Review</span></div>
               <div className="review-stat"><b>{weekReview.verify.length}</b><span>待验证</span></div>
               <div className="review-stat"><b>{weekReview.overdue.length}</b><span>已过期</span></div>
+              <div className="review-stat"><b>{weekReview.netChange >= 0 ? '+' : ''}{weekReview.netChange}</b><span>净变化</span></div>
             </div>
 
             <section className="review-section">
@@ -690,6 +691,7 @@ export default function App() {
                     <b>{day.date.slice(5)}</b>
                     <em>+{day.created}</em>
                     <em>✓{day.completed}</em>
+                    <em>待{day.active}</em>
                   </span>
                 ))}
               </div>
