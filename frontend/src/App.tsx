@@ -28,7 +28,7 @@ import {
   type ScopeFilter,
   type StatusFilter,
 } from './taskViews'
-import type { Task } from './types'
+import type { Task, TaskStatus } from './types'
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -115,6 +115,20 @@ export default function App() {
         await updateTask(task.id, patch)
       } catch (e) {
         setError(e instanceof Error ? e.message : '移动失败')
+      } finally {
+        void load()
+      }
+    },
+    [load],
+  )
+
+  const changeTaskStatus = useCallback(
+    async (task: Task, status: TaskStatus) => {
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status } : t)))
+      try {
+        await updateTask(task.id, { status })
+      } catch (e) {
+        setError(e instanceof Error ? e.message : '状态更新失败')
       } finally {
         void load()
       }
@@ -561,6 +575,7 @@ export default function App() {
         onSelect={(t) => setEditor(t)}
         onDelete={(t) => setDeleting(t)}
         onMove={moveTask}
+        onStatusChange={changeTaskStatus}
       />
 
       {deleting && (

@@ -837,6 +837,29 @@ button:disabled {
   border-radius: 999px;
   background: var(--count-bg);
 }
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.mini-btn {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: var(--input-bg);
+  font-size: 12px;
+}
+.mini-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-deep);
+  background: var(--hint-bg);
+}
 
 /* 卡片上的图片缩略图:点一下就复制 */
 .card-thumbs {

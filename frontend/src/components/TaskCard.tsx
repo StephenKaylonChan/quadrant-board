@@ -4,7 +4,7 @@ import { imageUrl } from '../api'
 import { copyImageToClipboard } from '../clipboard'
 import { dueLabel } from '../dates'
 import { STATUS_META } from '../statusMeta'
-import type { Task, TaskImage } from '../types'
+import type { Task, TaskImage, TaskStatus } from '../types'
 
 interface Props {
   task: Task
@@ -14,6 +14,7 @@ interface Props {
   allowDelete?: boolean
   onClick: () => void
   onDelete: () => void // 点卡片上的 ×,由 App 弹二次确认
+  onStatusChange?: (status: TaskStatus) => void
   onDragStart: () => void
   onDragEnd: () => void
   // 把别的卡片拖到这张卡上松手:after 表示插到这张卡的后面还是前面
@@ -28,11 +29,13 @@ export default function TaskCard({
   allowDelete = true,
   onClick,
   onDelete,
+  onStatusChange,
   onDragStart,
   onDragEnd,
   onDropOnCard,
 }: Props) {
   const [copyTip, setCopyTip] = useState<{ id: number; text: string } | null>(null)
+  const [taskCopyLabel, setTaskCopyLabel] = useState('复制')
   const [dropSide, setDropSide] = useState<'before' | 'after' | null>(null)
 
   function dropAfter(e: DragEvent<HTMLElement>): boolean {
@@ -66,8 +69,29 @@ export default function TaskCard({
     onClick()
   }
 
+  function nextStatus(): { status: TaskStatus; label: string } | null {
+    if (task.status === 'todo') return { status: 'doing', label: '开始' }
+    if (task.status === 'doing') return { status: 'verify', label: '待验证' }
+    if (task.status === 'verify') return { status: 'done', label: '归档' }
+    return null
+  }
+
+  async function copyTaskText(e: ReactMouseEvent) {
+    e.stopPropagation()
+    const due = task.due_date ? ` / ${task.due_date}` : ''
+    const desc = task.description.trim() ? `\n${task.description.trim()}` : ''
+    try {
+      await navigator.clipboard.writeText(`[${STATUS_META[task.status].label}${due}] ${task.title}${desc}`)
+      setTaskCopyLabel('已复制')
+    } catch (err) {
+      setTaskCopyLabel(err instanceof Error ? err.message : '复制失败')
+    }
+    window.setTimeout(() => setTaskCopyLabel('复制'), 1600)
+  }
+
   const due = dueLabel(task.due_date)
   const statusMeta = STATUS_META[task.status]
+  const quickStatus = nextStatus()
   const dropClass = dropSide === null || dragging || !draggable ? '' : ` card-drop-${dropSide}`
   const overdueClass = due?.overdue ? ' card-overdue' : ''
 
@@ -139,6 +163,23 @@ export default function TaskCard({
           {task.images.length > 0 && <span>{task.images.length} 张图</span>}
         </p>
       )}
+      <div className="card-actions">
+        {onStatusChange && quickStatus && (
+          <button
+            type="button"
+            className="mini-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              onStatusChange(quickStatus.status)
+            }}
+          >
+            {quickStatus.label}
+          </button>
+        )}
+        <button type="button" className="mini-btn" onClick={(e) => void copyTaskText(e)}>
+          {taskCopyLabel}
+        </button>
+      </div>
       {task.images.length > 0 && (
         <div className="card-thumbs">
           {task.images.map((img) => (

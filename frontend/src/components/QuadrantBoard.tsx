@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { todayStr } from '../dates'
 import { STATUS_META } from '../statusMeta'
 import { BOARD_VIEW_LABEL, type BoardView } from '../taskViews'
-import type { Task } from '../types'
+import type { Task, TaskStatus } from '../types'
 import TaskCard from './TaskCard'
 
 // 拖拽落点要改的字段:新顺序 + 目标象限对应的重要性/截止日期
@@ -19,6 +19,7 @@ interface Props {
   onSelect: (task: Task) => void
   onDelete: (task: Task) => void
   onMove: (task: Task, patch: MovePatch) => void
+  onStatusChange: (task: Task, status: TaskStatus) => void
 }
 
 interface QuadrantDef {
@@ -60,7 +61,15 @@ function sortActive(list: Task[], q: QuadrantDef): Task[] {
   })
 }
 
-export default function QuadrantBoard({ tasks, viewMode, isFiltered, onSelect, onDelete, onMove }: Props) {
+export default function QuadrantBoard({
+  tasks,
+  viewMode,
+  isFiltered,
+  onSelect,
+  onDelete,
+  onMove,
+  onStatusChange,
+}: Props) {
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [overQuad, setOverQuad] = useState<string | null>(null)
   const canEditCurrent = viewMode === 'current'
@@ -167,6 +176,7 @@ export default function QuadrantBoard({ tasks, viewMode, isFiltered, onSelect, o
                     allowDelete={canEditCurrent}
                     onClick={() => onSelect(t)}
                     onDelete={() => onDelete(t)}
+                    onStatusChange={canEditCurrent ? (status) => onStatusChange(t, status) : undefined}
                     onDragStart={() => setDraggingId(t.id)}
                     onDragEnd={() => {
                       setDraggingId(null)
