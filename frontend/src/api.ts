@@ -95,6 +95,10 @@ export interface MaintenanceSummary {
   image_total: number
   database_bytes: number
   upload_bytes: number
+  orphan_upload_count: number
+  orphan_upload_samples: string[]
+  missing_upload_count: number
+  missing_upload_samples: string[]
 }
 
 export function fetchMaintenanceSummary(): Promise<MaintenanceSummary> {

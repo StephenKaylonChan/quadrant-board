@@ -1626,6 +1626,27 @@ input[type='date'] {
   color: var(--ink);
   font-weight: 600;
 }
+.backup-health {
+  display: grid;
+  gap: 3px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.backup-health b {
+  color: var(--accent-deep);
+}
+.backup-health-ok b {
+  color: var(--chip-done-fg);
+}
+.backup-health-warn b {
+  color: var(--danger);
+}
+.backup-health em {
+  overflow: hidden;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .spacer {
   flex: 1;
 }

@@ -64,6 +64,10 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
+function uploadHealthOk(summary: MaintenanceSummary): boolean {
+  return summary.orphan_upload_count === 0 && summary.missing_upload_count === 0
+}
+
 export default function App() {
   const today = todayStr()
   const [boardDate, setBoardDate] = useState(today)
@@ -856,6 +860,25 @@ export default function App() {
                     <b>{backupSummary.image_total}</b> 张图片,
                     数据约 <b>{formatBytes(backupSummary.database_bytes + backupSummary.upload_bytes)}</b>
                   </p>
+                ) : (
+                  <p>{backupError || '暂无数据'}</p>
+                )}
+              </section>
+              <section>
+                <h3>图片健康</h3>
+                {backupBusy ? (
+                  <p>检查中</p>
+                ) : backupSummary ? (
+                  <div className={`backup-health ${uploadHealthOk(backupSummary) ? 'backup-health-ok' : 'backup-health-warn'}`}>
+                    <b>{uploadHealthOk(backupSummary) ? '文件一致' : '需要处理'}</b>
+                    <span>孤儿 {backupSummary.orphan_upload_count} / 缺失 {backupSummary.missing_upload_count}</span>
+                    {backupSummary.orphan_upload_samples.length > 0 && (
+                      <em>孤儿:{backupSummary.orphan_upload_samples.join(', ')}</em>
+                    )}
+                    {backupSummary.missing_upload_samples.length > 0 && (
+                      <em>缺失:{backupSummary.missing_upload_samples.join(', ')}</em>
+                    )}
+                  </div>
                 ) : (
                   <p>{backupError || '暂无数据'}</p>
                 )}
