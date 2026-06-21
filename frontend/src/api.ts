@@ -76,11 +76,11 @@ export function aiStatus(): Promise<{ enabled: boolean; model: string }> {
   return request('/api/ai/status')
 }
 
-export function aiParseTasks(text: string): Promise<TaskDraft[]> {
+export function aiParseTasks(text: string, existingTitles: string[] = []): Promise<TaskDraft[]> {
   return request('/api/ai/parse-task', {
     method: 'POST',
     headers: jsonHeaders,
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, existing_titles: existingTitles.slice(0, 30) }),
   })
 }
 

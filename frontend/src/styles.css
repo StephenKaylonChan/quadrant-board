@@ -359,6 +359,11 @@ button:focus-visible {
   color: var(--ink-soft);
   font-size: 12px;
 }
+.ai-context {
+  color: var(--ink-soft);
+  font-size: 12px;
+  white-space: nowrap;
+}
 .ai-bar .ai-input {
   flex: 1;
   width: auto;

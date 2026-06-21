@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from app.routers.ai import MAX_DRAFTS, _normalize_important, _parse_drafts
+from app.routers.ai import MAX_DRAFTS, _build_user_content, _normalize_important, _parse_drafts
 
 
 def test_bool_string() -> None:
@@ -45,10 +45,22 @@ def test_parse_limit_and_bad_status() -> None:
     assert len(drafts[0].description) == 2000
 
 
+def test_build_user_content_with_existing_titles() -> None:
+    content = _build_user_content(
+        "继续优化 AI 拆任务",
+        ["系统出现追问乱码异常", "系统出现追问乱码异常", "", "x" * 100],
+    )
+    assert "只作为去重参考" in content
+    assert content.count("系统出现追问乱码异常") == 1
+    assert "x" * 80 in content
+    assert "x" * 81 not in content
+
+
 def main() -> None:
     test_bool_string()
     test_parse_single_object_and_fence()
     test_parse_limit_and_bad_status()
+    test_build_user_content_with_existing_titles()
     print("ai parser tests passed")
 
 

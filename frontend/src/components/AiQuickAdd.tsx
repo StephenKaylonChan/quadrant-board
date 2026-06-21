@@ -6,6 +6,7 @@ interface Props {
   // 拆解成功后把草稿交给 App,由 App 逐条弹出预填好的编辑窗
   onDrafts: (drafts: TaskDraft[]) => void
   model?: string
+  existingTitles?: string[]
 }
 
 const AI_RECENT_KEY = 'qb-ai-recent-prompts'
@@ -25,7 +26,7 @@ function loadRecentPrompts(): string[] {
 }
 
 // AI 快捷新建:一句话 -> 草稿 -> 预填编辑窗确认后入库
-export default function AiQuickAdd({ onDrafts, model }: Props) {
+export default function AiQuickAdd({ onDrafts, model, existingTitles = [] }: Props) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -52,7 +53,7 @@ export default function AiQuickAdd({ onDrafts, model }: Props) {
     setNotice('')
     rememberPrompt(prompt)
     try {
-      const drafts = await aiParseTasks(prompt)
+      const drafts = await aiParseTasks(prompt, existingTitles)
       if (drafts.length === 0) {
         throw new Error('AI 没有拆出草稿,换个说法再试试')
       }
@@ -71,6 +72,7 @@ export default function AiQuickAdd({ onDrafts, model }: Props) {
       <div className="ai-bar">
         <span className="ai-tag">AI</span>
         {model && <span className="ai-model">{model}</span>}
+        {existingTitles.length > 0 && <span className="ai-context">参考 {existingTitles.length} 条当前任务去重</span>}
         <input
           type="text"
           className="ai-input"

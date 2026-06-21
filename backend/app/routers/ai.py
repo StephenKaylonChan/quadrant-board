@@ -53,6 +53,7 @@ WEEKDAY_CN = ["一", "二", "三", "四", "五", "六", "日"]
 
 class ParseIn(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
+    existing_titles: list[str] = Field(default_factory=list, max_length=30)
 
 
 VALID_STATUS = {"todo", "doing", "review", "verify", "done"}
@@ -85,7 +86,7 @@ async def parse_task(payload: ParseIn):
         "model": CHAT_MODEL,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT + date_context},
-            {"role": "user", "content": payload.text},
+            {"role": "user", "content": _build_user_content(payload.text, payload.existing_titles)},
         ],
         "temperature": 0.3,  # 判断类任务要稳定,温度调低
     }
@@ -122,6 +123,37 @@ def _normalize_due(value: object) -> str | None:
         return date.fromisoformat(str(value)).isoformat()
     except ValueError:
         return date.today().isoformat()
+
+
+def _clean_existing_titles(titles: list[str]) -> list[str]:
+    """清洗前端传来的当前任务标题,只给模型做去重参考。"""
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for title in titles:
+        normalized = title.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        cleaned.append(normalized[:80])
+        if len(cleaned) >= 30:
+            break
+    return cleaned
+
+
+def _build_user_content(text: str, existing_titles: list[str]) -> str:
+    """把当前任务标题附在用户输入后面,降低 AI 重复拆同一事项的概率。"""
+    titles = _clean_existing_titles(existing_titles)
+    if not titles:
+        return text
+
+    title_lines = "\n".join(f"- {title}" for title in titles)
+    return (
+        f"{text}\n\n"
+        "当前仍未归档的任务标题如下,只作为去重参考。"
+        "如果用户输入已经和已有任务表达同一件事,不要重复照抄已有标题;"
+        "只有出现新的动作、细节或验证事项时才拆成新草稿。\n"
+        f"{title_lines}"
+    )
 
 
 def _normalize_important(value: object) -> bool:

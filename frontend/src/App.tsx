@@ -429,6 +429,10 @@ export default function App() {
   const visibleViewTasks = useMemo(() => tasksForView(filteredTasks, boardView), [boardView, filteredTasks])
   const todaySummary = useMemo(() => countTodaySummary(tasks, boardDate), [boardDate, tasks])
   const focusQueue = useMemo(() => buildFocusQueue(tasks, boardDate), [boardDate, tasks])
+  const aiExistingTitles = useMemo(
+    () => tasks.filter((task) => task.status !== 'done').map((task) => task.title).slice(0, 30),
+    [tasks],
+  )
   const scopeLabel = SCOPE_FILTERS.find((item) => item.key === scopeFilter)?.label ?? '全部'
   const statusLabel = STATUS_FILTERS.find((item) => item.key === statusFilter)?.label ?? '全部状态'
   const clearFilters = useCallback(() => {
@@ -576,6 +580,7 @@ export default function App() {
       {aiEnabled && isToday && (
         <AiQuickAdd
           model={aiModel}
+          existingTitles={aiExistingTitles}
           onDrafts={(drafts) => {
             setDraftQueue(drafts)
             setDraftTotal(drafts.length)
