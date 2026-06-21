@@ -87,6 +87,8 @@ bash scripts/verify-local.sh
 
 大改交互时再按 [交互回归清单](docs/development/regression-checklist.md) 手动检查拖拽、历史日期、AI 草稿和图片复制。
 
+涉及数据库字段时，先看 [数据库轻量迁移策略](docs/development/database-migrations.md)。
+
 ## 常见问题
 
 - **端口被占**:改 `docker-compose.yml` 里的 `5173:5173` / `8000:8000` 左边的数字。

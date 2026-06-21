@@ -24,7 +24,7 @@
 
 旧字段 `urgency / importance` 只保留兼容老库，新代码不应读写。
 
-`init_db()` 只做轻量迁移：`create_all()` 建新表，但不会给旧表补列，所以新字段需要沿用当前 `PRAGMA table_info(tasks)` 后 `ALTER TABLE` 的模式。已有迁移包括 `sort_order`、`important` 和 `due_date`；`status`、`created_date`、`completed_date` 等早期列已经在现有库中存在。
+`init_db()` 只做轻量迁移：`create_all()` 建新表，但不会给旧表补列，所以新字段需要沿用当前 `PRAGMA table_info(tasks)` 后 `ALTER TABLE` 的模式。已有迁移包括 `sort_order`、`important` 和 `due_date`；`status`、`created_date`、`completed_date` 等早期列已经在现有库中存在。具体操作边界见 `docs/development/database-migrations.md`。
 
 ## 每日面板查询
 
