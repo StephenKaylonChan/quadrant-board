@@ -101,7 +101,12 @@ async def parse_task(payload: ParseIn):
     if resp.status_code != 200:
         raise HTTPException(status_code=502, detail=f"大模型调用失败:HTTP {resp.status_code}")
 
-    content = resp.json()["choices"][0]["message"]["content"]
+    try:
+        result = resp.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail="大模型返回的不是 JSON") from exc
+
+    content = _extract_message_content(result)
     drafts = _parse_drafts(content)
     if not drafts:
         raise HTTPException(status_code=502, detail="AI 没能拆出任务,换个说法再试试")
@@ -118,16 +123,70 @@ def _normalize_due(value: object) -> str | None:
         return date.today().isoformat()
 
 
+def _extract_message_content(result: object) -> str:
+    """读取 OpenAI 兼容响应,结构不对时返回可理解的 502。"""
+    if not isinstance(result, dict):
+        raise HTTPException(status_code=502, detail="大模型响应格式异常")
+
+    choices = result.get("choices")
+    if not isinstance(choices, list) or not choices:
+        raise HTTPException(status_code=502, detail="大模型没有返回候选结果")
+
+    first = choices[0]
+    if not isinstance(first, dict):
+        raise HTTPException(status_code=502, detail="大模型候选结果格式异常")
+
+    message = first.get("message")
+    if not isinstance(message, dict):
+        raise HTTPException(status_code=502, detail="大模型响应缺少 message")
+
+    content = message.get("content")
+    if not isinstance(content, str) or not content.strip():
+        raise HTTPException(status_code=502, detail="大模型返回了空内容")
+    return content
+
+
+def _strip_code_fence(text: str) -> str:
+    """兼容模型把 JSON 包在 ```json 代码块里的情况。"""
+    cleaned = text.strip()
+    if not cleaned.startswith("```"):
+        return cleaned
+
+    lines = cleaned.splitlines()
+    if lines and lines[0].startswith("```"):
+        lines = lines[1:]
+    if lines and lines[-1].startswith("```"):
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
+
+
+def _load_json_from_ai_text(content: str) -> object | None:
+    """尽量只抽取 JSON 主体,避免模型偶尔加一句解释导致整段解析失败。"""
+    text = _strip_code_fence(content)
+    candidates = [text]
+
+    array_start = text.find("[")
+    array_end = text.rfind("]")
+    if 0 <= array_start < array_end:
+        candidates.append(text[array_start : array_end + 1])
+
+    object_start = text.find("{")
+    object_end = text.rfind("}")
+    if 0 <= object_start < object_end:
+        candidates.append(text[object_start : object_end + 1])
+
+    for candidate in candidates:
+        try:
+            return json.loads(candidate.strip())
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
 def _parse_drafts(content: str) -> list[TaskDraft]:
-    """容错解析模型输出:剥掉可能的 ```json 代码块,逐条校验。"""
-    text = content.strip()
-    if text.startswith("```"):
-        text = text.strip("`").strip()
-        if text.startswith("json"):
-            text = text[4:]
-    try:
-        data = json.loads(text.strip())
-    except json.JSONDecodeError:
+    """容错解析模型输出:支持代码块、单对象和带少量解释的 JSON。"""
+    data = _load_json_from_ai_text(content)
+    if data is None:
         return []
 
     if isinstance(data, dict):

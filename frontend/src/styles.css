@@ -306,6 +306,11 @@ button:disabled {
 .ai-error {
   margin-top: 6px;
 }
+.ai-feedback {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
 
 /* "关闭前是否保存"的小确认框,盖在编辑弹窗上面 */
 .confirm-layer {

@@ -12,14 +12,20 @@ export default function AiQuickAdd({ onDrafts }: Props) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
 
   async function parse() {
     if (!text.trim() || busy) return
     setBusy(true)
     setError('')
+    setNotice('')
     try {
       const drafts = await aiParseTasks(text.trim())
+      if (drafts.length === 0) {
+        throw new Error('AI 没有拆出草稿,换个说法再试试')
+      }
       setText('')
+      setNotice(`已拆出 ${drafts.length} 条草稿,请逐条确认后保存`)
       onDrafts(drafts)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 拆解失败')
@@ -36,7 +42,10 @@ export default function AiQuickAdd({ onDrafts }: Props) {
           type="text"
           className="ai-input"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value)
+            if (notice) setNotice('')
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') void parse()
           }}
@@ -52,6 +61,7 @@ export default function AiQuickAdd({ onDrafts }: Props) {
         </button>
       </div>
       {error && <p className="error-text ai-error">{error}</p>}
+      {notice && <p className="ai-feedback" aria-live="polite">{notice}</p>}
     </div>
   )
 }
