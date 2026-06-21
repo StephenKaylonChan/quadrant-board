@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
 import { todayStr } from '../dates'
 import { STATUS_META } from '../statusMeta'
+import { BOARD_VIEW_LABEL, type BoardView } from '../taskViews'
 import type { Task } from '../types'
 import TaskCard from './TaskCard'
-
-export type BoardView = 'current' | 'review' | 'archive'
 
 // 拖拽落点要改的字段:新顺序 + 目标象限对应的重要性/截止日期
 export interface MovePatch {
@@ -59,12 +58,6 @@ function sortActive(list: Task[], q: QuadrantDef): Task[] {
     if (byStatus !== 0) return byStatus
     return a.sort_order - b.sort_order
   })
-}
-
-const VIEW_COUNT_LABEL: Record<BoardView, string> = {
-  current: '当前',
-  review: '待 Review',
-  archive: '归档',
 }
 
 export default function QuadrantBoard({ tasks, viewMode, isFiltered, onSelect, onDelete, onMove }: Props) {
@@ -156,7 +149,7 @@ export default function QuadrantBoard({ tasks, viewMode, isFiltered, onSelect, o
               <h2>{q.title}</h2>
               <span className="q-hint">{q.hint}</span>
               <span className="q-tools">
-                <span className="q-count">{VIEW_COUNT_LABEL[viewMode]} {visible.length}</span>
+                <span className="q-count">{BOARD_VIEW_LABEL[viewMode]} {visible.length}</span>
               </span>
             </header>
 
