@@ -437,6 +437,7 @@ button:focus-visible {
   gap: 7px;
   padding: 8px 24px 0 34px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .filter-chips button {
   flex: 0 0 auto;
@@ -1276,6 +1277,7 @@ input[type='date'] {
   column-gap: 6px;
   row-gap: 1px;
   min-width: 92px;
+  min-height: 44px;
   max-width: 190px;
   padding: 7px 9px;
   transform: translate(-50%, -50%);
@@ -1701,16 +1703,23 @@ input[type='date'] {
   }
   .board-view-switch,
   .layout-switch,
-  .filter-scope {
+  .filter-scope,
+  .filter-status,
+  .summary-strip,
+  .focus-strip {
     max-width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .topbar-actions {
     width: calc(100vw - 32px);
     max-width: 100%;
     flex: 0 0 calc(100vw - 32px);
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+  }
+  .topbar-actions .primary-btn {
+    grid-column: 1 / -1;
   }
   .topbar-actions button {
     width: 100%;
@@ -1749,17 +1758,22 @@ input[type='date'] {
   .scatter-board {
     padding: 16px;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .scatter-head {
-    width: min(720px, calc(100vw - 32px));
+    width: clamp(560px, 92vw, 720px);
     flex-direction: column;
   }
   .scatter-stats {
     justify-content: flex-start;
   }
   .scatter-stage {
-    flex: 0 0 720px;
+    flex: 0 0 clamp(560px, 92vw, 720px);
     min-height: 520px;
+  }
+  .scatter-point {
+    max-width: 160px;
+    padding: 8px 10px;
   }
   .quadrant {
     min-height: 220px;
