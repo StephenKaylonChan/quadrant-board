@@ -16,6 +16,9 @@ echo
 echo "== 前端构建 =="
 docker compose exec -T frontend npm run build
 
+echo "== 前端轻量测试 =="
+docker compose exec -T frontend npm run test:unit
+
 echo "== 接口冒烟 =="
 docker compose exec -T frontend npm run smoke:api
 
