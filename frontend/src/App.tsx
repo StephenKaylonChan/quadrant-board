@@ -80,6 +80,7 @@ export default function App() {
   const [aiModel, setAiModel] = useState('')
   // AI 拆出来的草稿队列:逐条弹预填编辑窗,保存或放弃一条就轮到下一条
   const [draftQueue, setDraftQueue] = useState<TaskDraft[]>([])
+  const [draftHistory, setDraftHistory] = useState<TaskDraft[]>([])
   const [draftTotal, setDraftTotal] = useState(0)
   // 待删除的任务(点了卡片上的 ×,等用户二次确认)
   const [deleting, setDeleting] = useState<Task | null>(null)
@@ -101,6 +102,7 @@ export default function App() {
   const [backupBusy, setBackupBusy] = useState(false)
   const [backupError, setBackupError] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const draftSavedRef = useRef(false)
 
   // 后端配了大模型密钥才显示 AI 输入框
   useEffect(() => {
@@ -443,10 +445,36 @@ export default function App() {
   }, [])
   const currentDraftNumber = draftTotal - draftQueue.length + 1
   const closeCurrentDraft = useCallback(() => {
-    setDraftQueue((prev) => prev.slice(1))
+    setDraftQueue((prev) => {
+      if (prev.length === 0) return prev
+      const current = prev[0]
+      const rest = prev.slice(1)
+      if (!draftSavedRef.current) {
+        setDraftHistory((history) => [...history, current])
+      }
+      if (rest.length === 0) {
+        setDraftHistory([])
+        setDraftTotal(0)
+      }
+      return rest
+    })
+    draftSavedRef.current = false
   }, [])
+  const restorePreviousDraft = useCallback(() => {
+    setDraftHistory((prev) => {
+      const previous = prev[prev.length - 1]
+      if (!previous) return prev
+      setDraftQueue((queue) => [previous, ...queue])
+      return prev.slice(0, -1)
+    })
+  }, [])
+  const loadAfterDraftSaved = useCallback(async () => {
+    draftSavedRef.current = true
+    await load()
+  }, [load])
   const skipAllDrafts = useCallback(() => {
     setDraftQueue([])
+    setDraftHistory([])
     setDraftTotal(0)
   }, [])
 
@@ -583,6 +611,7 @@ export default function App() {
           existingTitles={aiExistingTitles}
           onDrafts={(drafts) => {
             setDraftQueue(drafts)
+            setDraftHistory([])
             setDraftTotal(drafts.length)
           }}
         />
@@ -960,6 +989,14 @@ export default function App() {
           <div className="draft-queue-bar" role="status" aria-live="polite">
             <span>AI 草稿 {currentDraftNumber} / {draftTotal}</span>
             <b>剩余 {draftQueue.length} 条</b>
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={restorePreviousDraft}
+              disabled={draftHistory.length === 0}
+            >
+              上一条
+            </button>
             <button type="button" className="ghost-btn" onClick={skipAllDrafts}>
               跳过全部
             </button>
@@ -970,7 +1007,7 @@ export default function App() {
             draft={draftQueue[0]}
             heading={draftTotal > 1 ? `AI 草稿 ${currentDraftNumber} / ${draftTotal}` : 'AI 草稿'}
             onClose={closeCurrentDraft}
-            onChanged={load}
+            onChanged={loadAfterDraftSaved}
           />
         </>
       ) : (
