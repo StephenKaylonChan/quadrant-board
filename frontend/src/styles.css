@@ -1105,6 +1105,36 @@ button:focus-visible {
   padding-top: 4px;
   padding-bottom: 4px;
 }
+.draft-batch-bar {
+  position: fixed;
+  left: 50%;
+  top: 64px;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 10px;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--modal-bg);
+  box-shadow: 0 8px 22px var(--card-shadow);
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.draft-batch-bar span {
+  white-space: nowrap;
+}
+.draft-batch-bar select {
+  min-width: 92px;
+}
+.draft-batch-bar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
 
 .field {
   margin-bottom: 14px;
@@ -1837,6 +1867,15 @@ input[type='date'] {
   }
   .review-columns {
     grid-template-columns: 1fr 1fr;
+  }
+  .draft-batch-bar {
+    top: 62px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .draft-batch-bar span {
+    flex-basis: 100%;
+    text-align: center;
   }
   .review-section li {
     display: block;

@@ -89,6 +89,9 @@ export default function App() {
   const [draftQueue, setDraftQueue] = useState<TaskDraft[]>([])
   const [draftHistory, setDraftHistory] = useState<TaskDraft[]>([])
   const [draftTotal, setDraftTotal] = useState(0)
+  const [draftBatchStatus, setDraftBatchStatus] = useState<TaskStatus>('todo')
+  const [draftClearDue, setDraftClearDue] = useState(false)
+  const [draftRevision, setDraftRevision] = useState(0)
   // 待删除的任务(点了卡片上的 ×,等用户二次确认)
   const [deleting, setDeleting] = useState<Task | null>(null)
   const [syncDraft, setSyncDraft] = useState('')
@@ -505,6 +508,14 @@ export default function App() {
     setDraftHistory([])
     setDraftTotal(0)
   }, [])
+  const applyDraftBatchPatch = useCallback(() => {
+    setDraftQueue((prev) => prev.map((draft) => ({
+      ...draft,
+      status: draftBatchStatus,
+      due_date: draftClearDue ? null : draft.due_date,
+    })))
+    setDraftRevision((prev) => prev + 1)
+  }, [draftBatchStatus, draftClearDue])
 
   return (
     <div className="app">
@@ -643,6 +654,7 @@ export default function App() {
             setDraftQueue(drafts)
             setDraftHistory([])
             setDraftTotal(drafts.length)
+            setDraftRevision((prev) => prev + 1)
           }}
         />
       )}
@@ -1039,8 +1051,27 @@ export default function App() {
               跳过全部
             </button>
           </div>
+          <div className="draft-batch-bar" aria-label="AI 草稿批量微调">
+            <span>剩余草稿批量调整</span>
+            <select value={draftBatchStatus} onChange={(e) => setDraftBatchStatus(e.target.value as TaskStatus)}>
+              {STATUS_FILTERS.filter((item) => item.key !== 'all').map((item) => (
+                <option key={item.key} value={item.key}>{item.label}</option>
+              ))}
+            </select>
+            <label>
+              <input
+                type="checkbox"
+                checked={draftClearDue}
+                onChange={(e) => setDraftClearDue(e.target.checked)}
+              />
+              清空期限
+            </label>
+            <button type="button" className="ghost-btn" onClick={applyDraftBatchPatch}>
+              套用
+            </button>
+          </div>
           <TaskEditor
-            key={`ai-draft-${draftTotal - draftQueue.length}`}
+            key={`ai-draft-${draftTotal - draftQueue.length}-${draftRevision}`}
             task={null}
             draft={draftQueue[0]}
             heading={draftTotal > 1 ? `AI 草稿 ${currentDraftNumber} / ${draftTotal}` : 'AI 草稿'}
