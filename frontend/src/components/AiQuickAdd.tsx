@@ -16,6 +16,7 @@ const AI_TEMPLATES = [
   '已合并待真实环境验证,通过后归档',
   '整理今天要做的开发、沟通和复盘事项',
 ]
+const AI_PARSE_TIMEOUT_MS = 35_000
 
 function loadRecentPrompts(): string[] {
   try {
@@ -59,8 +60,10 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [], revie
     setError('')
     setNotice('')
     rememberPrompt(prompt)
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), AI_PARSE_TIMEOUT_MS)
     try {
-      const drafts = await aiParseTasks(prompt, existingTitles)
+      const drafts = await aiParseTasks(prompt, existingTitles, controller.signal)
       if (drafts.length === 0) {
         throw new Error('AI 没有拆出草稿,换个说法再试试')
       }
@@ -68,8 +71,13 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [], revie
       setNotice(`已拆出 ${drafts.length} 条草稿,请逐条确认后保存`)
       onDrafts(drafts)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'AI 拆解失败')
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setError('AI 拆解超过 35 秒,可以重试或把输入拆短一点')
+      } else {
+        setError(e instanceof Error ? e.message : 'AI 拆解失败')
+      }
     } finally {
+      window.clearTimeout(timeoutId)
       setBusy(false)
     }
   }
