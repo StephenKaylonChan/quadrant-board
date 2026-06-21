@@ -45,6 +45,12 @@ def main() -> None:
         health = request("/health")
         assert_true(health["status"] == "ok", "health endpoint should return ok")
 
+        upload_health = request("/maintenance/upload-health")
+        assert_true("orphan_upload_count" in upload_health, "upload health should expose orphan count")
+
+        cleanup_preview = request("/maintenance/cleanup-preview")
+        assert_true(cleanup_preview["mode"] == "dry-run", "cleanup preview should be dry-run")
+
         created = request(
             "/tasks",
             method="POST",

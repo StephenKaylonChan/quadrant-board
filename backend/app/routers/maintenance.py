@@ -11,6 +11,24 @@ from ..orphan_uploads import folder_size, upload_health
 router = APIRouter(tags=["maintenance"])
 
 
+async def _upload_health_payload(db: AsyncSession) -> dict[str, object]:
+    registered_images = set(await db.scalars(select(TaskImage.filename)))
+    return upload_health(UPLOAD_DIR, registered_images)
+
+
+@router.get("/maintenance/upload-health")
+async def maintenance_upload_health(db: AsyncSession = Depends(get_db)):
+    return await _upload_health_payload(db)
+
+
+@router.get("/maintenance/cleanup-preview")
+async def maintenance_cleanup_preview(db: AsyncSession = Depends(get_db)):
+    return {
+        "mode": "dry-run",
+        **await _upload_health_payload(db),
+    }
+
+
 @router.get("/maintenance/summary")
 async def maintenance_summary(db: AsyncSession = Depends(get_db)):
     task_total = await db.scalar(select(func.count()).select_from(Task))
@@ -19,7 +37,6 @@ async def maintenance_summary(db: AsyncSession = Depends(get_db)):
     )
     done_total = await db.scalar(select(func.count()).select_from(Task).where(Task.status == "done"))
     image_total = await db.scalar(select(func.count()).select_from(TaskImage))
-    registered_images = set(await db.scalars(select(TaskImage.filename)))
     database_file = DATA_DIR / "app.db"
 
     return {
@@ -31,5 +48,5 @@ async def maintenance_summary(db: AsyncSession = Depends(get_db)):
         "image_total": image_total or 0,
         "database_bytes": database_file.stat().st_size if database_file.exists() else 0,
         "upload_bytes": folder_size(UPLOAD_DIR),
-        **upload_health(UPLOAD_DIR, registered_images),
+        **await _upload_health_payload(db),
     }
