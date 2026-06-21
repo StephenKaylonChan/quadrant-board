@@ -44,15 +44,21 @@ docker compose up -d --build
 
 ## 数据备份和恢复
 
-运行期数据全部在 `data/`。备份时复制整个目录；恢复时停止容器、替换 `data/`、再启动容器。
+运行期数据全部在 `data/`。备份时复制整个目录；恢复时停止容器、替换 `data/`、再启动容器。详细说明见 `docs/development/data-backup-restore.md`。
+
+推荐备份：
+
+```bash
+scripts/backup-data.sh
+```
 
 恢复步骤：
 
 ```bash
 docker compose down
-# 替换 data/ 目录
+scripts/restore-data.sh --from backups/data-YYYYMMDD-HHMMSS
 docker compose up -d
-curl http://localhost:8000/api/health
+bash scripts/verify-local.sh
 ```
 
 ## 回滚

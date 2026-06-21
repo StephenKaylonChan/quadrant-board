@@ -46,6 +46,14 @@ docker compose down         # 停止
 全部在 `./data` 目录:`app.db` 是 SQLite 数据库(任务),`uploads/` 是图片。
 **备份 = 复制 data 目录**。删容器、重建镜像都不影响数据。
 
+也可以使用脚本：
+
+```bash
+scripts/backup-data.sh
+```
+
+恢复流程见 [数据备份与恢复](docs/development/data-backup-restore.md)。
+
 ## 目录结构
 
 ```
