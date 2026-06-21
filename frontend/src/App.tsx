@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { aiStatus, deleteTask, fetchTasks, updateTask } from './api'
 import type { TaskDraft } from './api'
 import AiQuickAdd from './components/AiQuickAdd'
@@ -56,6 +56,7 @@ export default function App() {
   const [weekReview, setWeekReview] = useState<WeekReview | null>(null)
   const [weekBusy, setWeekBusy] = useState(false)
   const [weekCopied, setWeekCopied] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // 后端配了大模型密钥才显示 AI 输入框
   useEffect(() => {
@@ -213,6 +214,24 @@ export default function App() {
     }
   }, deleting !== null || syncDraft !== '' || weekReview !== null)
 
+  useDocumentEvent('keydown', (e) => {
+    const target = e.target instanceof HTMLElement ? e.target : null
+    const isTyping = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA'
+
+    if (e.key === '/' && !isTyping) {
+      e.preventDefault()
+      searchInputRef.current?.focus()
+      return
+    }
+
+    if (e.key === 'Escape' && document.activeElement === searchInputRef.current && filterActive) {
+      e.preventDefault()
+      setSearchText('')
+      setScopeFilter('all')
+      searchInputRef.current?.blur()
+    }
+  }, editor === null && draftQueue.length === 0 && deleting === null && syncDraft === '' && weekReview === null)
+
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]
   const normalizedSearch = searchText.trim().toLowerCase()
@@ -333,6 +352,7 @@ export default function App() {
         <div className="filter-search">
           <span className="filter-icon" aria-hidden="true">⌕</span>
           <input
+            ref={searchInputRef}
             type="text"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
