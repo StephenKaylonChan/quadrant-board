@@ -398,6 +398,23 @@ button:focus-visible {
   color: var(--accent-deep);
   background: var(--hint-bg);
 }
+.ai-template-chip {
+  display: inline-flex;
+  max-width: 300px;
+}
+.ai-template-chip button:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.ai-template-chip .ai-template-remove {
+  width: 28px;
+  padding-left: 0;
+  padding-right: 0;
+  border-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  color: var(--danger);
+}
 .ai-error-row {
   display: flex;
   align-items: center;

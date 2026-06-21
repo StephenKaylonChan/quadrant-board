@@ -11,6 +11,7 @@ interface Props {
 }
 
 const AI_RECENT_KEY = 'qb-ai-recent-prompts'
+const AI_CUSTOM_TEMPLATE_KEY = 'qb-ai-custom-templates'
 const AI_TEMPLATES = [
   '排查线上异常,定位根因并给出修复方案',
   '已合并待真实环境验证,通过后归档',
@@ -27,6 +28,15 @@ function loadRecentPrompts(): string[] {
   }
 }
 
+function loadCustomTemplates(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(AI_CUSTOM_TEMPLATE_KEY) ?? '[]')
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string').slice(0, 8) : []
+  } catch {
+    return []
+  }
+}
+
 // AI 快捷新建:一句话 -> 草稿 -> 预填编辑窗确认后入库
 export default function AiQuickAdd({ onDrafts, model, existingTitles = [], reviewPrompt }: Props) {
   const [text, setText] = useState('')
@@ -34,6 +44,7 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [], revie
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [recentPrompts, setRecentPrompts] = useState<string[]>(loadRecentPrompts)
+  const [customTemplates, setCustomTemplates] = useState<string[]>(loadCustomTemplates)
 
   function rememberPrompt(prompt: string) {
     const next = [prompt, ...recentPrompts.filter((item) => item !== prompt)].slice(0, 3)
@@ -51,6 +62,22 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [], revie
     setText('')
     setError('')
     setNotice('')
+  }
+
+  function saveTemplate() {
+    const prompt = text.trim()
+    if (!prompt) return
+    const next = [prompt, ...customTemplates.filter((item) => item !== prompt)].slice(0, 8)
+    setCustomTemplates(next)
+    localStorage.setItem(AI_CUSTOM_TEMPLATE_KEY, JSON.stringify(next))
+    setNotice('已保存为 AI 模板')
+    setError('')
+  }
+
+  function removeTemplate(prompt: string) {
+    const next = customTemplates.filter((item) => item !== prompt)
+    setCustomTemplates(next)
+    localStorage.setItem(AI_CUSTOM_TEMPLATE_KEY, JSON.stringify(next))
   }
 
   async function parse() {
@@ -115,6 +142,14 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [], revie
         >
           {busy ? '拆解中…' : '拆解'}
         </button>
+        <button
+          type="button"
+          className="ghost-btn"
+          onClick={saveTemplate}
+          disabled={busy || !text.trim()}
+        >
+          存模板
+        </button>
       </div>
       <div className="ai-suggestions" aria-label="AI 输入快捷项">
         {reviewPrompt && (
@@ -126,6 +161,22 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [], revie
           <button key={item} type="button" onClick={() => usePrompt(item)} disabled={busy}>
             {item}
           </button>
+        ))}
+        {customTemplates.map((item) => (
+          <span key={`custom-${item}`} className="ai-template-chip">
+            <button type="button" onClick={() => usePrompt(item)} disabled={busy}>
+              模板:{item}
+            </button>
+            <button
+              type="button"
+              className="ai-template-remove"
+              onClick={() => removeTemplate(item)}
+              disabled={busy}
+              aria-label={`删除模板:${item}`}
+            >
+              ×
+            </button>
+          </span>
         ))}
         {recentPrompts.map((item) => (
           <button key={`recent-${item}`} type="button" onClick={() => usePrompt(item)} disabled={busy}>
