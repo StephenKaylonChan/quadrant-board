@@ -8,20 +8,51 @@ interface Props {
   model?: string
 }
 
+const AI_RECENT_KEY = 'qb-ai-recent-prompts'
+const AI_TEMPLATES = [
+  '排查线上异常,定位根因并给出修复方案',
+  '已合并待真实环境验证,通过后归档',
+  '整理今天要做的开发、沟通和复盘事项',
+]
+
+function loadRecentPrompts(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(AI_RECENT_KEY) ?? '[]')
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string').slice(0, 3) : []
+  } catch {
+    return []
+  }
+}
+
 // AI 快捷新建:一句话 -> 草稿 -> 预填编辑窗确认后入库
 export default function AiQuickAdd({ onDrafts, model }: Props) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [recentPrompts, setRecentPrompts] = useState<string[]>(loadRecentPrompts)
+
+  function rememberPrompt(prompt: string) {
+    const next = [prompt, ...recentPrompts.filter((item) => item !== prompt)].slice(0, 3)
+    setRecentPrompts(next)
+    localStorage.setItem(AI_RECENT_KEY, JSON.stringify(next))
+  }
+
+  function usePrompt(prompt: string) {
+    setText(prompt)
+    setError('')
+    setNotice('')
+  }
 
   async function parse() {
-    if (!text.trim() || busy) return
+    const prompt = text.trim()
+    if (!prompt || busy) return
     setBusy(true)
     setError('')
     setNotice('')
+    rememberPrompt(prompt)
     try {
-      const drafts = await aiParseTasks(text.trim())
+      const drafts = await aiParseTasks(prompt)
       if (drafts.length === 0) {
         throw new Error('AI 没有拆出草稿,换个说法再试试')
       }
@@ -64,6 +95,18 @@ export default function AiQuickAdd({ onDrafts, model }: Props) {
         >
           {busy ? '拆解中…' : '拆解'}
         </button>
+      </div>
+      <div className="ai-suggestions" aria-label="AI 输入快捷项">
+        {AI_TEMPLATES.map((item) => (
+          <button key={item} type="button" onClick={() => usePrompt(item)} disabled={busy}>
+            {item}
+          </button>
+        ))}
+        {recentPrompts.map((item) => (
+          <button key={`recent-${item}`} type="button" onClick={() => usePrompt(item)} disabled={busy}>
+            最近:{item}
+          </button>
+        ))}
       </div>
       {error && <p className="error-text ai-error">{error}</p>}
       {notice && <p className="ai-feedback" aria-live="polite">{notice}</p>}

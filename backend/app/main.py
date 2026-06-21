@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import UPLOAD_DIR
 from .database import init_db
-from .routers import ai, tasks
+from .routers import ai, maintenance, tasks
 
 
 # lifespan = 应用的"开机/关机钩子":yield 之前是启动时做的事,之后是关闭时
@@ -30,6 +30,7 @@ app.add_middleware(
 
 app.include_router(tasks.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
+app.include_router(maintenance.router, prefix="/api")
 
 # 上传的图片当静态文件直接对外:/uploads/<文件名> 就能在浏览器里打开
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { aiStatus, deleteTask, fetchTasks, updateTask } from './api'
-import type { TaskDraft } from './api'
+import { aiStatus, deleteTask, fetchMaintenanceSummary, fetchTasks, updateTask } from './api'
+import type { MaintenanceSummary, TaskDraft } from './api'
 import AiQuickAdd from './components/AiQuickAdd'
 import QuadrantBoard, { type MovePatch } from './components/QuadrantBoard'
+import TaskScatter from './components/TaskScatter'
 import TaskEditor from './components/TaskEditor'
 import { addDays, todayStr } from './dates'
 import { useDocumentEvent } from './hooks/useDocumentEvent'
@@ -33,9 +34,12 @@ import type { Task, TaskStatus } from './types'
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 
 type ThemeMode = 'light' | 'dark' | 'system'
+type BoardLayout = 'quadrant' | 'scatter'
 const THEME_LABEL: Record<ThemeMode, string> = { light: '浅色', dark: '深色', system: '系统' }
+const BOARD_LAYOUT_LABEL: Record<BoardLayout, string> = { quadrant: '象限', scatter: '坐标' }
 const THEME_KEY = 'qb-theme'
 const BOARD_VIEW_KEY = 'qb-board-view'
+const BOARD_LAYOUT_KEY = 'qb-board-layout'
 
 function loadTheme(): ThemeMode {
   const saved = localStorage.getItem(THEME_KEY)
@@ -45,6 +49,19 @@ function loadTheme(): ThemeMode {
 function loadBoardView(): BoardView {
   const saved = localStorage.getItem(BOARD_VIEW_KEY)
   return saved === 'current' || saved === 'review' || saved === 'archive' ? saved : 'current'
+}
+
+function loadBoardLayout(): BoardLayout {
+  const requested = new URLSearchParams(window.location.search).get('layout')
+  if (requested === 'scatter' || requested === 'quadrant') return requested
+  const saved = localStorage.getItem(BOARD_LAYOUT_KEY)
+  return saved === 'scatter' ? 'scatter' : 'quadrant'
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
 export default function App() {
@@ -65,6 +82,7 @@ export default function App() {
   const [syncDraft, setSyncDraft] = useState('')
   const [syncCopied, setSyncCopied] = useState(false)
   const [boardView, setBoardView] = useState<BoardView>(loadBoardView)
+  const [boardLayout, setBoardLayout] = useState<BoardLayout>(loadBoardLayout)
   const [searchText, setSearchText] = useState('')
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -74,6 +92,9 @@ export default function App() {
   const [weekBusy, setWeekBusy] = useState(false)
   const [weekCopied, setWeekCopied] = useState(false)
   const [backupOpen, setBackupOpen] = useState(false)
+  const [backupSummary, setBackupSummary] = useState<MaintenanceSummary | null>(null)
+  const [backupBusy, setBackupBusy] = useState(false)
+  const [backupError, setBackupError] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // 后端配了大模型密钥才显示 AI 输入框
@@ -102,6 +123,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(BOARD_VIEW_KEY, boardView)
   }, [boardView])
+
+  useEffect(() => {
+    localStorage.setItem(BOARD_LAYOUT_KEY, boardLayout)
+  }, [boardLayout])
 
   const load = useCallback(async () => {
     try {
@@ -234,6 +259,20 @@ export default function App() {
     }
   }
 
+  async function openBackup() {
+    setBackupOpen(true)
+    setBackupBusy(true)
+    setBackupError('')
+    setBackupSummary(null)
+    try {
+      setBackupSummary(await fetchMaintenanceSummary())
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : '读取数据概览失败')
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
   function showSummarySlice(
     view: BoardView,
     nextScope: ScopeFilter,
@@ -312,9 +351,19 @@ export default function App() {
         setBoardDate(today)
         return
       }
+      if (e.key.toLowerCase() === 'f' && focusQueue.length > 0) {
+        e.preventDefault()
+        setEditor(focusQueue[0].task)
+        return
+      }
       if (e.key === '1' || e.key === '2' || e.key === '3') {
         e.preventDefault()
         setBoardView(BOARD_VIEW_ORDER[Number(e.key) - 1])
+        return
+      }
+      if (e.key === '4') {
+        e.preventDefault()
+        setBoardLayout((layout) => (layout === 'quadrant' ? 'scatter' : 'quadrant'))
         return
       }
     }
@@ -411,6 +460,20 @@ export default function App() {
           ))}
         </div>
 
+        <div className="seg seg-sm layout-switch" role="group" aria-label="面板布局切换">
+          {(['quadrant', 'scatter'] as const).map((layout) => (
+            <button
+              key={layout}
+              type="button"
+              className={boardLayout === layout ? 'on' : ''}
+              onClick={() => setBoardLayout(layout)}
+              title={layout === 'scatter' ? '4' : undefined}
+            >
+              {BOARD_LAYOUT_LABEL[layout]}
+            </button>
+          ))}
+        </div>
+
         <div className="topbar-actions" aria-label="常用操作">
           <button
             className="primary-btn"
@@ -449,7 +512,7 @@ export default function App() {
           </button>
           <button
             className="ghost-btn"
-            onClick={() => setBackupOpen(true)}
+            onClick={() => void openBackup()}
             title="查看本机数据备份说明"
           >
             <span className="btn-icon" aria-hidden="true">◎</span>
@@ -589,6 +652,14 @@ export default function App() {
       {focusQueue.length > 0 && (
         <section className="focus-strip" aria-label="收口建议">
           <b>收口建议</b>
+          <button
+            type="button"
+            className="focus-primary"
+            onClick={() => setEditor(focusQueue[0].task)}
+            title="F"
+          >
+            打开第一项
+          </button>
           {focusQueue.map(({ task, reason }) => (
             <button key={task.id} type="button" onClick={() => setEditor(task)}>
               <span>{reason}</span>
@@ -598,16 +669,24 @@ export default function App() {
         </section>
       )}
 
-      <QuadrantBoard
-        tasks={filteredTasks}
-        viewMode={boardView}
-        isFiltered={filterActive}
-        onSelect={(t) => setEditor(t)}
-        onDelete={(t) => setDeleting(t)}
-        onMove={moveTask}
-        onStatusChange={changeTaskStatus}
-        onDueChange={changeTaskDue}
-      />
+      {boardLayout === 'scatter' ? (
+        <TaskScatter
+          tasks={visibleViewTasks}
+          boardDate={boardDate}
+          onSelect={(t) => setEditor(t)}
+        />
+      ) : (
+        <QuadrantBoard
+          tasks={filteredTasks}
+          viewMode={boardView}
+          isFiltered={filterActive}
+          onSelect={(t) => setEditor(t)}
+          onDelete={(t) => setDeleting(t)}
+          onMove={moveTask}
+          onStatusChange={changeTaskStatus}
+          onDueChange={changeTaskDue}
+        />
+      )}
 
       {deleting && (
         <div className="confirm-layer" onClick={() => setDeleting(null)}>
@@ -766,6 +845,20 @@ export default function App() {
               <section>
                 <h3>本机数据</h3>
                 <p>SQLite 数据库和上传图片都在项目的 <b>data/</b> 目录。</p>
+              </section>
+              <section>
+                <h3>数据概览</h3>
+                {backupBusy ? (
+                  <p>读取中</p>
+                ) : backupSummary ? (
+                  <p>
+                    <b>{backupSummary.task_total}</b> 个任务,
+                    <b>{backupSummary.image_total}</b> 张图片,
+                    数据约 <b>{formatBytes(backupSummary.database_bytes + backupSummary.upload_bytes)}</b>
+                  </p>
+                ) : (
+                  <p>{backupError || '暂无数据'}</p>
+                )}
               </section>
               <section>
                 <h3>轻量导出</h3>

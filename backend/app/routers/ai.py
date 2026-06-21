@@ -56,6 +56,7 @@ class ParseIn(BaseModel):
 
 
 VALID_STATUS = {"todo", "doing", "review", "verify", "done"}
+MAX_DRAFTS = 12
 
 
 class TaskDraft(BaseModel):
@@ -121,6 +122,19 @@ def _normalize_due(value: object) -> str | None:
         return date.fromisoformat(str(value)).isoformat()
     except ValueError:
         return date.today().isoformat()
+
+
+def _normalize_important(value: object) -> bool:
+    """重要性容错:兼容模型把布尔值写成字符串的情况。"""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"false", "0", "no", "n", "否", "不重要"}:
+            return False
+        if normalized in {"true", "1", "yes", "y", "是", "重要"}:
+            return True
+    return True if value is None else bool(value)
 
 
 def _extract_message_content(result: object) -> str:
@@ -196,6 +210,8 @@ def _parse_drafts(content: str) -> list[TaskDraft]:
 
     drafts: list[TaskDraft] = []
     for item in data:
+        if len(drafts) >= MAX_DRAFTS:
+            break
         if not isinstance(item, dict):
             continue
         title = str(item.get("title", "")).strip()
@@ -205,8 +221,8 @@ def _parse_drafts(content: str) -> list[TaskDraft]:
         drafts.append(
             TaskDraft(
                 title=title[:200],
-                description=str(item.get("description") or ""),
-                important=bool(item.get("important", True)),
+                description=str(item.get("description") or "")[:2000],
+                important=_normalize_important(item.get("important", True)),
                 due_date=_normalize_due(item.get("due_date")),
                 status=status if status in VALID_STATUS else "todo",
             )

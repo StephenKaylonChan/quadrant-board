@@ -83,3 +83,20 @@ export function aiParseTasks(text: string): Promise<TaskDraft[]> {
     body: JSON.stringify({ text }),
   })
 }
+
+// ===== 本机数据维护 =====
+
+export interface MaintenanceSummary {
+  data_dir: string
+  upload_dir: string
+  task_total: number
+  open_total: number
+  done_total: number
+  image_total: number
+  database_bytes: number
+  upload_bytes: number
+}
+
+export function fetchMaintenanceSummary(): Promise<MaintenanceSummary> {
+  return request('/api/maintenance/summary')
+}
