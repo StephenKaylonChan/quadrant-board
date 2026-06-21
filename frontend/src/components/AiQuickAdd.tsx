@@ -44,11 +44,14 @@ export default function AiQuickAdd({ onDrafts }: Props) {
           value={text}
           onChange={(e) => {
             setText(e.target.value)
+            if (error) setError('')
             if (notice) setNotice('')
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') void parse()
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) void parse()
           }}
+          disabled={busy}
+          aria-label="AI 拆任务输入"
           placeholder="一句话描述要做的事(可以一次说好几件),回车让 AI 拆好并弹出确认窗…"
         />
         <button
