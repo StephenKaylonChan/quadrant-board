@@ -121,3 +121,17 @@ export function buildWeekReviewText(review: WeekReview): string {
   lines.push(...(review.review.length > 0 ? review.review.map(taskLine) : ['- 暂无']))
   return lines.join('\n')
 }
+
+export function buildWeekAiSummaryPrompt(review: WeekReview): string {
+  const lines = [
+    `请基于下面的周回顾数据,帮我总结 ${review.startDate} ~ ${review.endDate} 的工作状态。`,
+    '',
+    '要求:',
+    '- 用 3 点概括本周完成、积压和风险',
+    '- 找出下周最应该先收口的任务',
+    '- 给出 3 条可执行的下周安排建议',
+    '',
+    buildWeekReviewText(review),
+  ]
+  return lines.join('\n')
+}

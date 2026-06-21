@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { aiParseTasks } from '../api'
 import type { TaskDraft } from '../api'
 
@@ -8,6 +8,7 @@ interface Props {
   model?: string
   existingTitles?: string[]
   reviewPrompt?: string
+  prefillPrompt?: string
 }
 
 const AI_RECENT_KEY = 'qb-ai-recent-prompts'
@@ -38,13 +39,20 @@ function loadCustomTemplates(): string[] {
 }
 
 // AI 快捷新建:一句话 -> 草稿 -> 预填编辑窗确认后入库
-export default function AiQuickAdd({ onDrafts, model, existingTitles = [], reviewPrompt }: Props) {
+export default function AiQuickAdd({ onDrafts, model, existingTitles = [], reviewPrompt, prefillPrompt }: Props) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [recentPrompts, setRecentPrompts] = useState<string[]>(loadRecentPrompts)
   const [customTemplates, setCustomTemplates] = useState<string[]>(loadCustomTemplates)
+
+  useEffect(() => {
+    if (!prefillPrompt) return
+    setText(prefillPrompt)
+    setError('')
+    setNotice('已填入 AI 提示,可继续编辑后拆解')
+  }, [prefillPrompt])
 
   function rememberPrompt(prompt: string) {
     const next = [prompt, ...recentPrompts.filter((item) => item !== prompt)].slice(0, 3)

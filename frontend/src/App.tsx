@@ -16,7 +16,7 @@ import {
   downloadJsonFile,
   downloadTextFile,
 } from './taskReports'
-import { buildWeekReview, buildWeekReviewText, type WeekReview } from './taskReview'
+import { buildWeekAiSummaryPrompt, buildWeekReview, buildWeekReviewText, type WeekReview } from './taskReview'
 import {
   BOARD_VIEW_LABEL,
   BOARD_VIEW_ORDER,
@@ -102,6 +102,7 @@ export default function App() {
   const [exported, setExported] = useState(false)
   const [jsonExported, setJsonExported] = useState(false)
   const [weekReview, setWeekReview] = useState<WeekReview | null>(null)
+  const [aiPrefillPrompt, setAiPrefillPrompt] = useState('')
   const [weekBusy, setWeekBusy] = useState(false)
   const [weekCopied, setWeekCopied] = useState(false)
   const [backupOpen, setBackupOpen] = useState(false)
@@ -250,6 +251,12 @@ export default function App() {
     } catch (e) {
       setError(e instanceof Error ? e.message : '复制周回顾失败')
     }
+  }
+
+  function fillAiWithWeekReview() {
+    if (!weekReview) return
+    setAiPrefillPrompt(buildWeekAiSummaryPrompt(weekReview))
+    setWeekReview(null)
   }
 
   function downloadBoardExport() {
@@ -631,6 +638,7 @@ export default function App() {
           model={aiModel}
           existingTitles={aiExistingTitles}
           reviewPrompt={aiReviewPrompt}
+          prefillPrompt={aiPrefillPrompt}
           onDrafts={(drafts) => {
             setDraftQueue(drafts)
             setDraftHistory([])
@@ -921,6 +929,14 @@ export default function App() {
                 title="Ctrl / Cmd + Enter"
               >
                 {weekCopied ? '已复制' : '复制回顾'}
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={fillAiWithWeekReview}
+                disabled={!aiEnabled}
+              >
+                填入 AI 总结
               </button>
               <button type="button" className="ghost-btn" onClick={() => setWeekReview(null)}>
                 关闭

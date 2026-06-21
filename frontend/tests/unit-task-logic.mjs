@@ -28,6 +28,7 @@ const server = await createServer({
 try {
   const taskViews = await server.ssrLoadModule('/src/taskViews.ts')
   const taskReports = await server.ssrLoadModule('/src/taskReports.ts')
+  const taskReview = await server.ssrLoadModule('/src/taskReview.ts')
   const clipboard = await server.ssrLoadModule('/src/clipboard.ts')
   const today = '2026-06-22'
   const tasks = [
@@ -82,6 +83,13 @@ try {
   assert(reviewPrompt.includes('当前复盘'), 'AI 复盘提示应包含视图复盘目标')
   assert(reviewPrompt.includes('搜索=异常'), 'AI 复盘提示应包含搜索条件')
   assert(reviewPrompt.includes('[进行中] 任务 4'), 'AI 复盘提示应包含任务状态和标题')
+
+  const weekPrompt = taskReview.buildWeekAiSummaryPrompt(taskReview.buildWeekReview([
+    { date: '2026-06-21', tasks },
+    { date: today, tasks },
+  ]))
+  assert(weekPrompt.includes('周回顾数据'), '周回顾 AI 提示应说明输入来源')
+  assert(weekPrompt.includes('下周安排建议'), '周回顾 AI 提示应包含行动建议要求')
 
   const permissionError = new Error('not allowed by browser')
   permissionError.name = 'NotAllowedError'
