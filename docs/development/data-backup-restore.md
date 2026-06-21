@@ -47,3 +47,19 @@ uploads/
 - 恢复前必须停止服务，避免 SQLite 文件正在被写入。
 - 恢复后必须运行 `bash scripts/verify-local.sh`。
 - 如果恢复后维护概览出现孤儿或缺失图片，先不要继续清理，保留恢复前自动备份用于对照。
+
+## 孤儿图片清理
+
+先预览：
+
+```bash
+python3 scripts/cleanup_orphan_uploads.py
+```
+
+确认输出中的 `orphan_upload_count` 和文件名后，再显式删除：
+
+```bash
+python3 scripts/cleanup_orphan_uploads.py --apply
+```
+
+缺失图片记录只报告，不会自动修改数据库。

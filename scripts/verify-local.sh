@@ -26,5 +26,7 @@ echo "== 后端轻量测试 =="
 docker compose exec -T backend python app/tests/test_ai_parser.py
 docker compose exec -T backend python app/tests/test_maintenance.py
 docker compose exec -T backend python app/tests/test_tasks_api_live.py
+docker compose exec -T backend python app/tests/test_cleanup_orphan_uploads.py
+python3 scripts/cleanup_orphan_uploads.py
 
 echo "== 完成 =="
