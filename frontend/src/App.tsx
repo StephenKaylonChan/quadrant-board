@@ -71,10 +71,16 @@ function buildDailySync(tasks: Task[], today: string, weekday: string): string {
 
 function countByView(source: Task[]): Record<BoardView, number> {
   return {
-    current: source.filter((t) => t.status !== 'done' && t.status !== 'review').length,
-    review: source.filter((t) => t.status === 'review').length,
-    archive: source.filter((t) => t.status === 'done').length,
+    current: tasksForView(source, 'current').length,
+    review: tasksForView(source, 'review').length,
+    archive: tasksForView(source, 'archive').length,
   }
+}
+
+function tasksForView(source: Task[], view: BoardView): Task[] {
+  if (view === 'review') return source.filter((t) => t.status === 'review')
+  if (view === 'archive') return source.filter((t) => t.status === 'done')
+  return source.filter((t) => t.status !== 'done' && t.status !== 'review')
 }
 
 function matchScope(task: Task, scope: ScopeFilter): boolean {
@@ -98,6 +104,75 @@ function matchSearch(task: Task, keyword: string): boolean {
   return text.includes(keyword)
 }
 
+function formatExportTask(task: Task, index: number, boardDate: string): string[] {
+  const checkbox = task.status === 'done' ? 'x' : ' '
+  const due = task.due_date
+    ? task.due_date < boardDate
+      ? `已过期 ${task.due_date}`
+      : `截止 ${task.due_date}`
+    : '无期限'
+  const lines = [
+    `${index}. [${checkbox}] ${task.title}`,
+    `   - 状态：${STATUS_META[task.status].label}`,
+    `   - 范围：${task.important ? '重要' : '不重要'} / ${due}`,
+  ]
+  if (task.description.trim()) {
+    lines.push(`   - 备注：${task.description.trim().replace(/\r?\n/g, '\n     ')}`)
+  }
+  if (task.images.length > 0) {
+    lines.push(`   - 图片：${task.images.length} 张`)
+  }
+  return lines
+}
+
+function buildBoardExport(
+  visibleTasks: Task[],
+  allViewCount: number,
+  boardDate: string,
+  weekday: string,
+  view: BoardView,
+  searchText: string,
+  scopeFilter: ScopeFilter,
+): string {
+  const scopeLabel = SCOPE_FILTERS.find((item) => item.key === scopeFilter)?.label ?? '全部'
+  const lines = [
+    `# 每日四象限导出 - ${boardDate}`,
+    '',
+    `- 日期：${boardDate} 周${weekday}`,
+    `- 视图：${BOARD_VIEW_LABEL[view]}`,
+    `- 范围：${scopeLabel}`,
+    `- 搜索：${searchText.trim() || '无'}`,
+    `- 任务：${visibleTasks.length} / ${allViewCount}`,
+    '',
+    '## 任务列表',
+  ]
+
+  if (visibleTasks.length === 0) {
+    lines.push('', '暂无匹配任务')
+    return lines.join('\n')
+  }
+
+  for (const status of SYNC_STATUS_ORDER) {
+    const list = visibleTasks.filter((task) => task.status === status)
+    if (list.length === 0) continue
+    lines.push('', `### ${STATUS_META[status].icon} ${STATUS_META[status].label}`)
+    list.forEach((task, index) => lines.push(...formatExportTask(task, index + 1, boardDate)))
+  }
+  return lines.join('\n')
+}
+
+function downloadTextFile(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
 export default function App() {
   const today = todayStr()
   const [boardDate, setBoardDate] = useState(today)
@@ -117,6 +192,7 @@ export default function App() {
   const [boardView, setBoardView] = useState<BoardView>('current')
   const [searchText, setSearchText] = useState('')
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all')
+  const [exported, setExported] = useState(false)
 
   // 后端配了大模型密钥才显示 AI 输入框
   useEffect(() => {
@@ -189,6 +265,25 @@ export default function App() {
     }
   }
 
+  function downloadBoardExport() {
+    try {
+      const content = buildBoardExport(
+        visibleViewTasks,
+        boardViewCounts[boardView],
+        boardDate,
+        weekday,
+        boardView,
+        searchText,
+        scopeFilter,
+      )
+      downloadTextFile(`quadrant-board-${boardDate}-${boardView}.md`, content)
+      setExported(true)
+      window.setTimeout(() => setExported(false), 1200)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '导出失败')
+    }
+  }
+
   useDocumentEvent('keydown', (e) => {
     if (deleting) {
       if (e.key === 'Escape') {
@@ -224,6 +319,7 @@ export default function App() {
   const boardViewCounts = useMemo(() => countByView(tasks), [tasks])
   const filteredBoardViewCounts = useMemo(() => countByView(filteredTasks), [filteredTasks])
   const tabCounts = filterActive ? filteredBoardViewCounts : boardViewCounts
+  const visibleViewTasks = useMemo(() => tasksForView(filteredTasks, boardView), [boardView, filteredTasks])
 
   return (
     <div className="app">
@@ -289,6 +385,14 @@ export default function App() {
         >
           <span className="btn-icon" aria-hidden="true">↗</span>
           今日同步
+        </button>
+        <button
+          className="ghost-btn"
+          onClick={downloadBoardExport}
+          title="导出当前视图和筛选结果为 Markdown"
+        >
+          <span className="btn-icon" aria-hidden="true">↓</span>
+          {exported ? '已导出' : '导出'}
         </button>
       </header>
 
