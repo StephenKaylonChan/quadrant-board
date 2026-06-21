@@ -8,7 +8,7 @@ import TaskEditor from './components/TaskEditor'
 import { addDays, todayStr } from './dates'
 import { useDocumentEvent } from './hooks/useDocumentEvent'
 import { STATUS_META } from './statusMeta'
-import { buildBoardExport, buildDailySync, downloadTextFile } from './taskReports'
+import { buildBoardExport, buildBoardJsonExport, buildDailySync, downloadJsonFile, downloadTextFile } from './taskReports'
 import { buildWeekReview, buildWeekReviewText, type WeekReview } from './taskReview'
 import {
   BOARD_VIEW_LABEL,
@@ -92,6 +92,7 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [focusFilter, setFocusFilter] = useState<FocusFilter>('all')
   const [exported, setExported] = useState(false)
+  const [jsonExported, setJsonExported] = useState(false)
   const [weekReview, setWeekReview] = useState<WeekReview | null>(null)
   const [weekBusy, setWeekBusy] = useState(false)
   const [weekCopied, setWeekCopied] = useState(false)
@@ -260,6 +261,27 @@ export default function App() {
       window.setTimeout(() => setExported(false), 1200)
     } catch (e) {
       setError(e instanceof Error ? e.message : '导出失败')
+    }
+  }
+
+  function downloadBoardJsonExport() {
+    try {
+      const content = buildBoardJsonExport(
+        visibleViewTasks,
+        boardViewCounts[boardView],
+        boardDate,
+        weekday,
+        boardView,
+        searchText,
+        scopeFilter,
+        statusFilter,
+        focusFilter,
+      )
+      downloadJsonFile(`quadrant-board-${boardDate}-${boardView}.json`, content)
+      setJsonExported(true)
+      window.setTimeout(() => setJsonExported(false), 1200)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '导出 JSON 失败')
     }
   }
 
@@ -513,6 +535,14 @@ export default function App() {
           >
             <span className="btn-icon" aria-hidden="true">↓</span>
             {exported ? '已导出' : '导出'}
+          </button>
+          <button
+            className="ghost-btn"
+            onClick={downloadBoardJsonExport}
+            title="导出当前视图和筛选结果为 JSON 数据包"
+          >
+            <span className="btn-icon" aria-hidden="true">⇩</span>
+            {jsonExported ? '已导出' : 'JSON'}
           </button>
           <button
             className="ghost-btn"
@@ -885,7 +915,7 @@ export default function App() {
               </section>
               <section>
                 <h3>轻量导出</h3>
-                <p>顶部「导出」会把当前日期、视图和筛选结果保存为 Markdown。</p>
+                <p>顶部「导出」保存 Markdown,「JSON」保存可导入预检的数据包。</p>
               </section>
               <section>
                 <h3>完整备份</h3>
@@ -899,6 +929,9 @@ export default function App() {
             <div className="modal-foot">
               <button type="button" className="primary-btn" onClick={downloadBoardExport}>
                 导出当前视图
+              </button>
+              <button type="button" className="ghost-btn" onClick={downloadBoardJsonExport}>
+                导出 JSON
               </button>
               <button type="button" className="ghost-btn" onClick={() => setBackupOpen(false)}>
                 关闭

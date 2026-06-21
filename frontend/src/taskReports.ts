@@ -132,8 +132,65 @@ export function buildBoardExport(
   return lines.join('\n')
 }
 
-export function downloadTextFile(filename: string, content: string) {
-  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+export function buildBoardJsonExport(
+  visibleTasks: Task[],
+  allViewCount: number,
+  boardDate: string,
+  weekday: string,
+  view: BoardView,
+  searchText: string,
+  scopeFilter: ScopeFilter,
+  statusFilter: StatusFilter,
+  focusFilter: FocusFilter,
+): string {
+  const scopeLabel = SCOPE_FILTERS.find((item) => item.key === scopeFilter)?.label ?? '全部'
+  const statusLabel = STATUS_FILTERS.find((item) => item.key === statusFilter)?.label ?? '全部状态'
+  return JSON.stringify(
+    {
+      format: 'quadrant-board.tasks.v1',
+      exported_at: new Date().toISOString(),
+      board_date: boardDate,
+      weekday,
+      view,
+      view_label: BOARD_VIEW_LABEL[view],
+      filters: {
+        search: searchText.trim(),
+        scope: scopeFilter,
+        scope_label: scopeLabel,
+        status: statusFilter,
+        status_label: statusLabel,
+        focus: focusFilter,
+        focus_label: FOCUS_FILTER_LABEL[focusFilter],
+      },
+      count: {
+        exported: visibleTasks.length,
+        view_total: allViewCount,
+      },
+      tasks: visibleTasks.map((task) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        important: task.important,
+        due_date: task.due_date,
+        status: task.status,
+        sort_order: task.sort_order,
+        created_date: task.created_date,
+        completed_date: task.completed_date,
+        images: task.images.map((image) => ({
+          id: image.id,
+          filename: image.filename,
+          original_name: image.original_name,
+          url: `/uploads/${image.filename}`,
+        })),
+      })),
+    },
+    null,
+    2,
+  )
+}
+
+function downloadFile(filename: string, content: string, type: string) {
+  const blob = new Blob([content], { type })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -142,4 +199,12 @@ export function downloadTextFile(filename: string, content: string) {
   link.click()
   link.remove()
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+export function downloadTextFile(filename: string, content: string) {
+  downloadFile(filename, content, 'text/markdown;charset=utf-8')
+}
+
+export function downloadJsonFile(filename: string, content: string) {
+  downloadFile(filename, content, 'application/json;charset=utf-8')
 }
