@@ -12,8 +12,10 @@ import { buildWeekReview, buildWeekReviewText, type WeekReview } from './taskRev
 import {
   BOARD_VIEW_LABEL,
   BOARD_VIEW_ORDER,
+  FOCUS_FILTER_LABEL,
   SCOPE_FILTERS,
   STATUS_FILTERS,
+  buildFocusQueue,
   countByView,
   countTodaySummary,
   matchFocus,
@@ -308,6 +310,15 @@ export default function App() {
   const tabCounts = filterActive ? filteredBoardViewCounts : boardViewCounts
   const visibleViewTasks = useMemo(() => tasksForView(filteredTasks, boardView), [boardView, filteredTasks])
   const todaySummary = useMemo(() => countTodaySummary(tasks, boardDate), [boardDate, tasks])
+  const focusQueue = useMemo(() => buildFocusQueue(tasks, boardDate), [boardDate, tasks])
+  const scopeLabel = SCOPE_FILTERS.find((item) => item.key === scopeFilter)?.label ?? '全部'
+  const statusLabel = STATUS_FILTERS.find((item) => item.key === statusFilter)?.label ?? '全部状态'
+  const clearFilters = useCallback(() => {
+    setSearchText('')
+    setScopeFilter('all')
+    setStatusFilter('all')
+    setFocusFilter('all')
+  }, [])
 
   return (
     <div className="app">
@@ -466,12 +477,7 @@ export default function App() {
           <button
             type="button"
             className="ghost-btn filter-clear"
-            onClick={() => {
-              setSearchText('')
-              setScopeFilter('all')
-              setStatusFilter('all')
-              setFocusFilter('all')
-            }}
+            onClick={clearFilters}
           >
             清空筛选
           </button>
@@ -479,6 +485,36 @@ export default function App() {
       </section>
       {filterActive && boardView === 'current' && (
         <div className="hint-bar">筛选中暂不支持拖拽排序,清空筛选后再调整顺序</div>
+      )}
+      {filterActive && filteredBoardViewCounts[boardView] === 0 && (
+        <div className="empty-filter">
+          <b>没有匹配任务</b>
+          <button type="button" className="ghost-btn" onClick={clearFilters}>清空筛选</button>
+        </div>
+      )}
+      {filterActive && (
+        <section className="filter-chips" aria-label="当前筛选条件">
+          {searchText.trim() && (
+            <button type="button" onClick={() => setSearchText('')}>
+              搜索:{searchText.trim()} <span aria-hidden="true">×</span>
+            </button>
+          )}
+          {scopeFilter !== 'all' && (
+            <button type="button" onClick={() => setScopeFilter('all')}>
+              范围:{scopeLabel} <span aria-hidden="true">×</span>
+            </button>
+          )}
+          {statusFilter !== 'all' && (
+            <button type="button" onClick={() => setStatusFilter('all')}>
+              状态:{statusLabel} <span aria-hidden="true">×</span>
+            </button>
+          )}
+          {focusFilter !== 'all' && (
+            <button type="button" onClick={() => setFocusFilter('all')}>
+              重点:{FOCUS_FILTER_LABEL[focusFilter]} <span aria-hidden="true">×</span>
+            </button>
+          )}
+        </section>
       )}
       <section className="summary-strip" aria-label="当日概览">
         <button type="button" className={boardView === 'current' && !filterActive ? 'on' : ''} onClick={() => showSummarySlice('current', 'all', 'all')}>
@@ -506,6 +542,17 @@ export default function App() {
           <b>{todaySummary.doneToday}</b>今日归档
         </button>
       </section>
+      {focusQueue.length > 0 && (
+        <section className="focus-strip" aria-label="收口建议">
+          <b>收口建议</b>
+          {focusQueue.map(({ task, reason }) => (
+            <button key={task.id} type="button" onClick={() => setEditor(task)}>
+              <span>{reason}</span>
+              {task.title}
+            </button>
+          ))}
+        </section>
+      )}
 
       <QuadrantBoard
         tasks={filteredTasks}

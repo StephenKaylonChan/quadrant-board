@@ -6,6 +6,11 @@ export type BoardView = 'current' | 'review' | 'archive'
 export type ScopeFilter = 'all' | 'important' | 'normal' | 'dated' | 'undated'
 export type StatusFilter = 'all' | TaskStatus
 export type FocusFilter = 'all' | 'overdue' | 'due-today' | 'due-tomorrow' | 'stale-doing'
+export interface FocusTask {
+  task: Task
+  reason: string
+  score: number
+}
 
 export const BOARD_VIEW_LABEL: Record<BoardView, string> = {
   current: '当前',
@@ -66,6 +71,44 @@ export function countTodaySummary(source: Task[], today: string) {
     staleDoing: active.filter((task) => task.status === 'doing' && task.created_date < today).length,
     doneToday: source.filter((task) => task.completed_date === today).length,
   }
+}
+
+function focusScore(task: Task, today: string): FocusTask | null {
+  if (task.status === 'review' || task.status === 'done') return null
+
+  if (task.due_date !== null && task.due_date < today) {
+    return { task, reason: `已过期 ${task.due_date.slice(5)}`, score: 100 }
+  }
+  if (task.due_date === today) {
+    return { task, reason: '今日截止', score: 90 }
+  }
+  if (task.status === 'verify') {
+    return { task, reason: '待真实验证', score: 80 }
+  }
+  if (task.status === 'doing' && task.created_date < today) {
+    return { task, reason: '隔夜进行中', score: 70 }
+  }
+  if (task.important && task.status === 'doing') {
+    return { task, reason: '重要进行中', score: 60 }
+  }
+  if (task.due_date === addDays(today, 1)) {
+    return { task, reason: '明日截止', score: 50 }
+  }
+  return null
+}
+
+export function buildFocusQueue(source: Task[], today: string, limit = 4): FocusTask[] {
+  return source
+    .map((task) => focusScore(task, today))
+    .filter((item): item is FocusTask => item !== null)
+    .sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score
+      const aDue = a.task.due_date ?? '9999-12-31'
+      const bDue = b.task.due_date ?? '9999-12-31'
+      if (aDue !== bDue) return aDue < bDue ? -1 : 1
+      return a.task.sort_order - b.task.sort_order
+    })
+    .slice(0, limit)
 }
 
 export function matchScope(task: Task, scope: ScopeFilter): boolean {

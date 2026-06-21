@@ -364,6 +364,41 @@ button:disabled {
 .filter-clear {
   flex: 0 0 auto;
 }
+.filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 24px 0 34px;
+  overflow-x: auto;
+}
+.filter-chips button {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: var(--surface);
+  font-size: 12px;
+}
+.filter-chips button:hover {
+  border-color: var(--accent);
+  color: var(--accent-deep);
+}
+.empty-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 24px 0 34px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--ink-soft);
+  background: var(--surface);
+  font-size: 13px;
+}
+.empty-filter b {
+  color: var(--ink);
+}
 .summary-strip {
   display: flex;
   align-items: center;
@@ -395,6 +430,41 @@ button:disabled {
   font-family: var(--font-display);
   font-size: 17px;
   line-height: 1;
+}
+.focus-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px 0 34px;
+  overflow-x: auto;
+}
+.focus-strip > b {
+  flex: 0 0 auto;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+.focus-strip button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 280px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+}
+.focus-strip button:hover {
+  border-color: var(--accent);
+  background: var(--hint-bg);
+}
+.focus-strip span {
+  flex: 0 0 auto;
+  color: var(--danger);
+  font-weight: 500;
 }
 
 /* "关闭前是否保存"的小确认框,盖在编辑弹窗上面 */
@@ -1319,9 +1389,16 @@ input[type='date'] {
   }
   .ai-area,
   .filter-bar,
-  .summary-strip {
+  .filter-chips,
+  .empty-filter,
+  .summary-strip,
+  .focus-strip {
     padding-left: 16px;
     padding-right: 16px;
+  }
+  .empty-filter {
+    margin-left: 16px;
+    margin-right: 16px;
   }
   .ai-bar {
     flex-wrap: wrap;
