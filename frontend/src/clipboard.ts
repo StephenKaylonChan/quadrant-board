@@ -17,7 +17,15 @@ async function imageToPngBlob(url: string): Promise<Blob> {
   )
 }
 
-function normalizeClipboardError(err: unknown): Error {
+function canWriteImageClipboard(): boolean {
+  return (
+    typeof navigator !== 'undefined' &&
+    !!navigator.clipboard?.write &&
+    typeof ClipboardItem !== 'undefined'
+  )
+}
+
+export function normalizeClipboardError(err: unknown): Error {
   if (err instanceof Error) {
     if (err.name === 'NotAllowedError' || /not allowed|permission/i.test(err.message)) {
       return new Error('浏览器拒绝写入剪贴板,可右键图片选择复制图片')
@@ -32,7 +40,7 @@ export function prepareImageForClipboard(url: string): Promise<Blob> {
 }
 
 export async function copyPreparedImageToClipboard(pngBlob: Blob): Promise<void> {
-  if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+  if (!canWriteImageClipboard()) {
     throw new Error('当前浏览器不支持复制图片到剪贴板')
   }
 
@@ -46,7 +54,7 @@ export async function copyPreparedImageToClipboard(pngBlob: Blob): Promise<void>
 // 把一张图片复制进系统剪贴板。
 // 浏览器剪贴板基本只收 PNG,其他格式(jpg/webp)先画到画布上转一道再写入。
 export async function copyImageToClipboard(url: string): Promise<void> {
-  if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+  if (!canWriteImageClipboard()) {
     throw new Error('当前浏览器不支持复制图片到剪贴板')
   }
 

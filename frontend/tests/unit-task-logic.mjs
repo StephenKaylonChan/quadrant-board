@@ -28,6 +28,7 @@ const server = await createServer({
 try {
   const taskViews = await server.ssrLoadModule('/src/taskViews.ts')
   const taskReports = await server.ssrLoadModule('/src/taskReports.ts')
+  const clipboard = await server.ssrLoadModule('/src/clipboard.ts')
   const today = '2026-06-22'
   const tasks = [
     makeTask({ id: 1, status: 'todo', due_date: today, sort_order: 2 }),
@@ -68,6 +69,24 @@ try {
   assert(parsed.format === 'quadrant-board.tasks.v1', 'JSON 导出格式版本错误')
   assert(parsed.tasks.length === 3, 'JSON 导出任务数量错误')
   assert(parsed.count.view_total === 3, 'JSON 导出视图总数错误')
+
+  const permissionError = new Error('not allowed by browser')
+  permissionError.name = 'NotAllowedError'
+  assert(
+    clipboard.normalizeClipboardError(permissionError).message.includes('右键图片'),
+    '剪贴板权限错误应提示右键复制兜底',
+  )
+
+  let unsupportedMessage = ''
+  try {
+    await clipboard.copyPreparedImageToClipboard(new Blob(['png'], { type: 'image/png' }))
+  } catch (err) {
+    unsupportedMessage = err instanceof Error ? err.message : String(err)
+  }
+  assert(
+    unsupportedMessage === '当前浏览器不支持复制图片到剪贴板',
+    '非浏览器环境应返回明确的剪贴板不支持提示',
+  )
 
   console.log('unit task logic tests passed')
 } finally {
