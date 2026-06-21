@@ -77,6 +77,16 @@ quadrant-board/
 前后端都挂载进了容器并开了热重载:**改完保存,刷新浏览器就生效**,不用重启容器。
 (只有改 `requirements.txt` / `package.json` 这类依赖文件时,才需要 `docker compose up -d --build`。)
 
+## 验证
+
+交付前先跑自动验证:
+
+```bash
+bash scripts/verify-local.sh
+```
+
+大改交互时再按 [交互回归清单](docs/development/regression-checklist.md) 手动检查拖拽、历史日期、AI 草稿和图片复制。
+
 ## 常见问题
 
 - **端口被占**:改 `docker-compose.yml` 里的 `5173:5173` / `8000:8000` 左边的数字。
