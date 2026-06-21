@@ -4,6 +4,7 @@ import {
   FOCUS_FILTER_LABEL,
   SCOPE_FILTERS,
   STATUS_FILTERS,
+  buildFocusQueue,
   type BoardView,
   type FocusFilter,
   type ScopeFilter,
@@ -31,11 +32,17 @@ function formatSyncTask(task: Task, today: string): string[] {
 export function buildDailySync(tasks: Task[], today: string, weekday: string): string {
   const byStatus = (status: TaskStatus) => tasks.filter((task) => task.status === status)
   const lines: string[] = [`今日待办同步（${today} 周${weekday}）：`, '', '总体：']
+  const focusQueue = buildFocusQueue(tasks, today, 5)
 
   for (const status of SYNC_STATUS_ORDER) {
     const meta = STATUS_META[status]
     lines.push(`- ${meta.icon} ${meta.syncSummary}：${byStatus(status).length} 个`)
   }
+
+  lines.push('', '收口建议：')
+  lines.push(...(focusQueue.length > 0
+    ? focusQueue.map(({ task, reason }) => `- ${reason}：${task.title}`)
+    : ['- 暂无']))
 
   SYNC_STATUS_ORDER.forEach((status, index) => {
     const meta = STATUS_META[status]
@@ -81,6 +88,7 @@ export function buildBoardExport(
 ): string {
   const scopeLabel = SCOPE_FILTERS.find((item) => item.key === scopeFilter)?.label ?? '全部'
   const statusLabel = STATUS_FILTERS.find((item) => item.key === statusFilter)?.label ?? '全部状态'
+  const focusQueue = buildFocusQueue(visibleTasks, boardDate, 5)
   const lines = [
     `# 每日四象限导出 - ${boardDate}`,
     '',
@@ -92,8 +100,17 @@ export function buildBoardExport(
     `- 搜索：${searchText.trim() || '无'}`,
     `- 任务：${visibleTasks.length} / ${allViewCount}`,
     '',
-    '## 任务列表',
+    '## 收口建议',
   ]
+
+  lines.push(...(focusQueue.length > 0
+    ? focusQueue.map(({ task, reason }) => `- ${reason}：${task.title}`)
+    : ['- 暂无']))
+
+  lines.push(
+    '',
+    '## 任务列表',
+  )
 
   if (visibleTasks.length === 0) {
     lines.push('', '暂无匹配任务')
