@@ -133,6 +133,12 @@ export default function TaskCard({
       </div>
       <h3 className="card-title">{task.title}</h3>
       {task.description && <p className="card-desc">{task.description}</p>}
+      {(task.images.length > 0 || task.created_date) && (
+        <p className="card-meta">
+          <span>创建 {task.created_date.slice(5)}</span>
+          {task.images.length > 0 && <span>{task.images.length} 张图</span>}
+        </p>
+      )}
       {task.images.length > 0 && (
         <div className="card-thumbs">
           {task.images.map((img) => (

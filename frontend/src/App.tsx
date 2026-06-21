@@ -16,11 +16,13 @@ import {
   STATUS_FILTERS,
   countByView,
   countTodaySummary,
+  matchFocus,
   matchScope,
   matchSearch,
   matchStatus,
   tasksForView,
   type BoardView,
+  type FocusFilter,
   type ScopeFilter,
   type StatusFilter,
 } from './taskViews'
@@ -58,6 +60,7 @@ export default function App() {
   const [searchText, setSearchText] = useState('')
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [focusFilter, setFocusFilter] = useState<FocusFilter>('all')
   const [exported, setExported] = useState(false)
   const [weekReview, setWeekReview] = useState<WeekReview | null>(null)
   const [weekBusy, setWeekBusy] = useState(false)
@@ -181,6 +184,7 @@ export default function App() {
         searchText,
         scopeFilter,
         statusFilter,
+        focusFilter,
       )
       downloadTextFile(`quadrant-board-${boardDate}-${boardView}.md`, content)
       setExported(true)
@@ -188,6 +192,19 @@ export default function App() {
     } catch (e) {
       setError(e instanceof Error ? e.message : '导出失败')
     }
+  }
+
+  function showSummarySlice(
+    view: BoardView,
+    nextScope: ScopeFilter,
+    nextStatus: StatusFilter,
+    nextFocus: FocusFilter = 'all',
+  ) {
+    setBoardView(view)
+    setScopeFilter(nextScope)
+    setStatusFilter(nextStatus)
+    setFocusFilter(nextFocus)
+    setSearchText('')
   }
 
   useDocumentEvent('keydown', (e) => {
@@ -245,6 +262,7 @@ export default function App() {
       setSearchText('')
       setScopeFilter('all')
       setStatusFilter('all')
+      setFocusFilter('all')
       searchInputRef.current?.blur()
     }
   }, editor === null && draftQueue.length === 0 && deleting === null && syncDraft === '' && weekReview === null)
@@ -252,14 +270,15 @@ export default function App() {
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]
   const normalizedSearch = searchText.trim().toLowerCase()
-  const filterActive = normalizedSearch !== '' || scopeFilter !== 'all' || statusFilter !== 'all'
+  const filterActive = normalizedSearch !== '' || scopeFilter !== 'all' || statusFilter !== 'all' || focusFilter !== 'all'
   const filteredTasks = useMemo(
     () => tasks.filter(
       (task) => matchScope(task, scopeFilter)
         && matchStatus(task, statusFilter)
+        && matchFocus(task, focusFilter, boardDate)
         && matchSearch(task, normalizedSearch),
     ),
-    [normalizedSearch, scopeFilter, statusFilter, tasks],
+    [boardDate, focusFilter, normalizedSearch, scopeFilter, statusFilter, tasks],
   )
   const boardViewCounts = useMemo(() => countByView(tasks), [tasks])
   const filteredBoardViewCounts = useMemo(() => countByView(filteredTasks), [filteredTasks])
@@ -428,6 +447,7 @@ export default function App() {
               setSearchText('')
               setScopeFilter('all')
               setStatusFilter('all')
+              setFocusFilter('all')
             }}
           >
             清空筛选
@@ -438,12 +458,30 @@ export default function App() {
         <div className="hint-bar">筛选中暂不支持拖拽排序,清空筛选后再调整顺序</div>
       )}
       <section className="summary-strip" aria-label="当日概览">
-        <span><b>{todaySummary.active}</b>待处理</span>
-        <span><b>{todaySummary.overdue}</b>过期</span>
-        <span><b>{todaySummary.dueToday}</b>今日截止</span>
-        <span><b>{todaySummary.verify}</b>待验证</span>
-        <span><b>{todaySummary.review}</b>待 Review</span>
-        <span><b>{todaySummary.doneToday}</b>今日归档</span>
+        <button type="button" className={boardView === 'current' && !filterActive ? 'on' : ''} onClick={() => showSummarySlice('current', 'all', 'all')}>
+          <b>{todaySummary.active}</b>待处理
+        </button>
+        <button type="button" className={focusFilter === 'overdue' ? 'on' : ''} onClick={() => showSummarySlice('current', 'all', 'all', 'overdue')}>
+          <b>{todaySummary.overdue}</b>过期
+        </button>
+        <button type="button" className={focusFilter === 'due-today' ? 'on' : ''} onClick={() => showSummarySlice('current', 'all', 'all', 'due-today')}>
+          <b>{todaySummary.dueToday}</b>今日截止
+        </button>
+        <button type="button" className={focusFilter === 'due-tomorrow' ? 'on' : ''} onClick={() => showSummarySlice('current', 'all', 'all', 'due-tomorrow')}>
+          <b>{todaySummary.dueTomorrow}</b>明日截止
+        </button>
+        <button type="button" className={focusFilter === 'stale-doing' ? 'on' : ''} onClick={() => showSummarySlice('current', 'all', 'all', 'stale-doing')}>
+          <b>{todaySummary.staleDoing}</b>隔夜进行
+        </button>
+        <button type="button" className={statusFilter === 'verify' ? 'on' : ''} onClick={() => showSummarySlice('current', 'all', 'verify')}>
+          <b>{todaySummary.verify}</b>待验证
+        </button>
+        <button type="button" className={boardView === 'review' ? 'on' : ''} onClick={() => showSummarySlice('review', 'all', 'all')}>
+          <b>{todaySummary.review}</b>待 Review
+        </button>
+        <button type="button" className={boardView === 'archive' && statusFilter === 'done' ? 'on' : ''} onClick={() => showSummarySlice('archive', 'all', 'done')}>
+          <b>{todaySummary.doneToday}</b>今日归档
+        </button>
       </section>
 
       <QuadrantBoard

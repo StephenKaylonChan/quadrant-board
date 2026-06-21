@@ -371,7 +371,7 @@ button:disabled {
   padding: 10px 24px 0 34px;
   overflow-x: auto;
 }
-.summary-strip span {
+.summary-strip button {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: baseline;
@@ -383,6 +383,12 @@ button:disabled {
   color: var(--ink-soft);
   background: var(--surface);
   font-size: 12px;
+}
+.summary-strip button:hover,
+.summary-strip button.on {
+  border-color: var(--accent);
+  color: var(--accent-deep);
+  background: var(--hint-bg);
 }
 .summary-strip b {
   color: var(--ink);
@@ -746,6 +752,20 @@ button:disabled {
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
+}
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.card-meta span {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--count-bg);
 }
 
 /* 卡片上的图片缩略图:点一下就复制 */

@@ -1,9 +1,11 @@
 import { STATUS_META, SYNC_STATUS_ORDER } from './statusMeta'
 import {
   BOARD_VIEW_LABEL,
+  FOCUS_FILTER_LABEL,
   SCOPE_FILTERS,
   STATUS_FILTERS,
   type BoardView,
+  type FocusFilter,
   type ScopeFilter,
   type StatusFilter,
 } from './taskViews'
@@ -75,6 +77,7 @@ export function buildBoardExport(
   searchText: string,
   scopeFilter: ScopeFilter,
   statusFilter: StatusFilter,
+  focusFilter: FocusFilter,
 ): string {
   const scopeLabel = SCOPE_FILTERS.find((item) => item.key === scopeFilter)?.label ?? '全部'
   const statusLabel = STATUS_FILTERS.find((item) => item.key === statusFilter)?.label ?? '全部状态'
@@ -85,6 +88,7 @@ export function buildBoardExport(
     `- 视图：${BOARD_VIEW_LABEL[view]}`,
     `- 范围：${scopeLabel}`,
     `- 状态：${statusLabel}`,
+    `- 重点：${FOCUS_FILTER_LABEL[focusFilter]}`,
     `- 搜索：${searchText.trim() || '无'}`,
     `- 任务：${visibleTasks.length} / ${allViewCount}`,
     '',
