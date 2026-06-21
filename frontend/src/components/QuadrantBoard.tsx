@@ -16,6 +16,7 @@ export interface MovePatch {
 interface Props {
   tasks: Task[]
   viewMode: BoardView
+  isFiltered: boolean
   onSelect: (task: Task) => void
   onDelete: (task: Task) => void
   onMove: (task: Task, patch: MovePatch) => void
@@ -66,10 +67,11 @@ const VIEW_COUNT_LABEL: Record<BoardView, string> = {
   archive: '归档',
 }
 
-export default function QuadrantBoard({ tasks, viewMode, onSelect, onDelete, onMove }: Props) {
+export default function QuadrantBoard({ tasks, viewMode, isFiltered, onSelect, onDelete, onMove }: Props) {
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [overQuad, setOverQuad] = useState<string | null>(null)
-  const canDrag = viewMode === 'current'
+  const canEditCurrent = viewMode === 'current'
+  const canDrag = canEditCurrent && !isFiltered
 
   const groupedTasks = useMemo(() => {
     const result: Record<string, QuadrantTasks> = {}
@@ -160,7 +162,7 @@ export default function QuadrantBoard({ tasks, viewMode, onSelect, onDelete, onM
 
             <div className="q-list">
               {visible.length === 0 ? (
-                <p className="q-empty">空着挺好</p>
+                <p className="q-empty">{isFiltered ? '没有匹配任务' : '空着挺好'}</p>
               ) : (
                 visible.map((t, i) => (
                   <TaskCard
@@ -169,7 +171,7 @@ export default function QuadrantBoard({ tasks, viewMode, onSelect, onDelete, onM
                     index={i + 1}
                     dragging={t.id === draggingId}
                     draggable={canDrag}
-                    allowDelete={canDrag}
+                    allowDelete={canEditCurrent}
                     onClick={() => onSelect(t)}
                     onDelete={() => onDelete(t)}
                     onDragStart={() => setDraggingId(t.id)}

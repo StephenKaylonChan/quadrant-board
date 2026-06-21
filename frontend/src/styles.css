@@ -312,6 +312,43 @@ button:disabled {
   color: var(--ink-soft);
 }
 
+/* ===== 搜索和筛选 ===== */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px 0 34px;
+}
+.filter-search {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+.filter-search input {
+  padding-left: 34px;
+}
+.filter-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-soft);
+  font-size: 14px;
+  pointer-events: none;
+}
+.filter-scope {
+  flex: 0 0 auto;
+}
+.filter-count {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.filter-clear {
+  flex: 0 0 auto;
+}
+
 /* "关闭前是否保存"的小确认框,盖在编辑弹窗上面 */
 .confirm-layer {
   position: fixed;
@@ -1020,17 +1057,50 @@ input[type='date'] {
 
 /* 窄窗口时退化为上下排布,依然可用 */
 @media (max-width: 760px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .brand {
+    width: 100%;
+  }
+  .date-nav {
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+  .board-view-switch,
+  .filter-scope {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .ai-area,
+  .filter-bar {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .ai-bar {
+    flex-wrap: wrap;
+  }
+  .ai-bar .ai-input {
+    min-width: 0;
+  }
   .board {
     grid-template-columns: 1fr;
     grid-template-rows: none;
     overflow-y: auto;
+    padding: 16px;
   }
   .quadrant {
     min-height: 220px;
   }
-  .topbar {
+  .filter-bar {
     flex-wrap: wrap;
-    gap: 12px;
+  }
+  .filter-search {
+    flex-basis: 100%;
+    min-width: 0;
   }
   .q-head {
     flex-wrap: wrap;

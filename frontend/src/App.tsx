@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { aiStatus, deleteTask, fetchTasks, updateTask } from './api'
 import type { TaskDraft } from './api'
 import AiQuickAdd from './components/AiQuickAdd'
@@ -19,6 +19,14 @@ const BOARD_VIEW_LABEL: Record<BoardView, string> = {
   review: '待 Review',
   archive: '归档',
 }
+type ScopeFilter = 'all' | 'important' | 'normal' | 'dated' | 'undated'
+const SCOPE_FILTERS: { key: ScopeFilter; label: string }[] = [
+  { key: 'all', label: '全部' },
+  { key: 'important', label: '重要' },
+  { key: 'normal', label: '不重要' },
+  { key: 'dated', label: '有期限' },
+  { key: 'undated', label: '无期限' },
+]
 
 function loadTheme(): ThemeMode {
   const saved = localStorage.getItem(THEME_KEY)
@@ -61,6 +69,35 @@ function buildDailySync(tasks: Task[], today: string, weekday: string): string {
   return lines.join('\n')
 }
 
+function countByView(source: Task[]): Record<BoardView, number> {
+  return {
+    current: source.filter((t) => t.status !== 'done' && t.status !== 'review').length,
+    review: source.filter((t) => t.status === 'review').length,
+    archive: source.filter((t) => t.status === 'done').length,
+  }
+}
+
+function matchScope(task: Task, scope: ScopeFilter): boolean {
+  if (scope === 'important') return task.important
+  if (scope === 'normal') return !task.important
+  if (scope === 'dated') return task.due_date !== null
+  if (scope === 'undated') return task.due_date === null
+  return true
+}
+
+function matchSearch(task: Task, keyword: string): boolean {
+  if (!keyword) return true
+  const text = [
+    task.title,
+    task.description,
+    STATUS_META[task.status].label,
+    task.due_date ?? '',
+    task.created_date,
+    task.completed_date ?? '',
+  ].join('\n').toLowerCase()
+  return text.includes(keyword)
+}
+
 export default function App() {
   const today = todayStr()
   const [boardDate, setBoardDate] = useState(today)
@@ -78,6 +115,8 @@ export default function App() {
   const [syncDraft, setSyncDraft] = useState('')
   const [syncCopied, setSyncCopied] = useState(false)
   const [boardView, setBoardView] = useState<BoardView>('current')
+  const [searchText, setSearchText] = useState('')
+  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all')
 
   // 后端配了大模型密钥才显示 AI 输入框
   useEffect(() => {
@@ -176,11 +215,15 @@ export default function App() {
 
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]
-  const boardViewCounts: Record<BoardView, number> = {
-    current: tasks.filter((t) => t.status !== 'done' && t.status !== 'review').length,
-    review: tasks.filter((t) => t.status === 'review').length,
-    archive: tasks.filter((t) => t.status === 'done').length,
-  }
+  const normalizedSearch = searchText.trim().toLowerCase()
+  const filterActive = normalizedSearch !== '' || scopeFilter !== 'all'
+  const filteredTasks = useMemo(
+    () => tasks.filter((task) => matchScope(task, scopeFilter) && matchSearch(task, normalizedSearch)),
+    [normalizedSearch, scopeFilter, tasks],
+  )
+  const boardViewCounts = useMemo(() => countByView(tasks), [tasks])
+  const filteredBoardViewCounts = useMemo(() => countByView(filteredTasks), [filteredTasks])
+  const tabCounts = filterActive ? filteredBoardViewCounts : boardViewCounts
 
   return (
     <div className="app">
@@ -224,7 +267,7 @@ export default function App() {
               className={boardView === view ? 'on' : ''}
               onClick={() => setBoardView(view)}
             >
-              {BOARD_VIEW_LABEL[view]} {boardViewCounts[view]}
+              {BOARD_VIEW_LABEL[view]} {tabCounts[view]}
             </button>
           ))}
         </div>
@@ -268,9 +311,53 @@ export default function App() {
         />
       )}
 
+      <section className="filter-bar" aria-label="任务筛选">
+        <div className="filter-search">
+          <span className="filter-icon" aria-hidden="true">⌕</span>
+          <input
+            type="text"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="搜索标题、备注、状态或日期"
+            aria-label="搜索任务"
+          />
+        </div>
+        <div className="seg seg-sm filter-scope" role="group" aria-label="范围筛选">
+          {SCOPE_FILTERS.map((filter) => (
+            <button
+              key={filter.key}
+              type="button"
+              className={scopeFilter === filter.key ? 'on' : ''}
+              onClick={() => setScopeFilter(filter.key)}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+        <span className="filter-count">
+          显示 {filteredBoardViewCounts[boardView]} / {boardViewCounts[boardView]}
+        </span>
+        {filterActive && (
+          <button
+            type="button"
+            className="ghost-btn filter-clear"
+            onClick={() => {
+              setSearchText('')
+              setScopeFilter('all')
+            }}
+          >
+            清空筛选
+          </button>
+        )}
+      </section>
+      {filterActive && boardView === 'current' && (
+        <div className="hint-bar">筛选中暂不支持拖拽排序,清空筛选后再调整顺序</div>
+      )}
+
       <QuadrantBoard
-        tasks={tasks}
+        tasks={filteredTasks}
         viewMode={boardView}
+        isFiltered={filterActive}
         onSelect={(t) => setEditor(t)}
         onDelete={(t) => setDeleting(t)}
         onMove={moveTask}
