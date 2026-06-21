@@ -888,6 +888,9 @@ button:disabled {
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+.field-label b.over-limit {
+  color: var(--danger);
+}
 
 input[type='text'],
 textarea {

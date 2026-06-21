@@ -32,6 +32,9 @@ const DUE_OPTIONS: { value: DueChoice; label: string }[] = [
   { value: 'none', label: '无期限' },
 ]
 
+const TITLE_MAX = 200
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
 function choiceOf(due: string | null): DueChoice {
   if (due === null) return 'none'
   if (due === todayStr()) return 'today'
@@ -66,6 +69,8 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
   const [error, setError] = useState('')
   const [lightbox, setLightbox] = useState<string | null>(null) // 正在全屏预览的图片地址
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const titleLength = title.trim().length
+  const canSave = titleLength > 0 && titleLength <= TITLE_MAX && !busy
 
   // 关闭弹窗时释放预览图占用的内存(URL.createObjectURL 创建的地址要手动回收)
   const pendingRef = useRef<PendingImage[]>([])
@@ -75,13 +80,20 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
   }, [])
 
   async function addFiles(files: File[]) {
-    const imgs = files.filter((f) => f.type.startsWith('image/'))
+    const imageFiles = files.filter((f) => f.type.startsWith('image/'))
+    const oversized = imageFiles.filter((f) => f.size > MAX_IMAGE_SIZE)
+    const imgs = imageFiles.filter((f) => f.size <= MAX_IMAGE_SIZE)
+    if (oversized.length > 0) {
+      setError(`已忽略 ${oversized.length} 张超过 10MB 的图片`)
+    } else if (imageFiles.length > 0) {
+      setError('')
+    }
     if (imgs.length === 0) return
 
     if (isEdit && task) {
       // 编辑模式:直接上传到这个任务
       setBusy(true)
-      setError('')
+      if (oversized.length === 0) setError('')
       try {
         const added = await uploadImages(task.id, imgs)
         setImages((prev) => [...prev, ...added])
@@ -103,9 +115,10 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
   // 监听整个页面的粘贴事件:弹窗开着时按 Ctrl/Cmd+V 就能贴图
   useDocumentEvent('paste', (e) => {
     const files = Array.from(e.clipboardData?.files ?? [])
-    if (files.length > 0) {
+    const images = files.filter((file) => file.type.startsWith('image/'))
+    if (images.length > 0) {
       e.preventDefault() // 是图片才拦截;纯文字照常粘贴进输入框
-      void addFiles(files)
+      void addFiles(images)
     }
   })
 
@@ -120,6 +133,10 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
   async function handleSubmit() {
     if (!title.trim()) {
       setError('标题不能为空')
+      return
+    }
+    if (title.trim().length > TITLE_MAX) {
+      setError(`标题不能超过 ${TITLE_MAX} 个字`)
       return
     }
     setBusy(true)
@@ -230,7 +247,7 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
       e.preventDefault()
       attemptClose()
     }
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if ((e.key === 'Enter' || e.key.toLowerCase() === 's') && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       void handleSubmit()
     }
@@ -248,19 +265,26 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
         <h2>{heading ?? (isEdit ? '编辑任务' : '新任务')}</h2>
 
         <div className="field">
-          <label className="field-label" htmlFor="task-title">标题</label>
+          <label className="field-label" htmlFor="task-title">
+            标题
+            <b className={titleLength > TITLE_MAX ? 'over-limit' : ''}>{titleLength}/{TITLE_MAX}</b>
+          </label>
           <input
             id="task-title"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="一句话说清要做什么"
+            maxLength={TITLE_MAX + 20}
             autoFocus
           />
         </div>
 
         <div className="field">
-          <label className="field-label" htmlFor="task-desc">备注</label>
+          <label className="field-label" htmlFor="task-desc">
+            备注
+            <b>{description.trim().length}</b>
+          </label>
           <textarea
             id="task-desc"
             rows={3}
@@ -329,7 +353,10 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
         </div>
 
         <div className="field">
-          <span className="field-label">图片</span>
+          <span className="field-label">
+            图片
+            <b>{images.length} 已上传 / {pending.length} 待上传</b>
+          </span>
           <div className="images">
             {images.map((img) => (
               <div key={img.id} className="thumb">
@@ -390,7 +417,9 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
               }}
             />
           </div>
-          <p className="paste-hint">截图后 Ctrl / Cmd + V 直接粘贴;点图片放大,预览里可点按钮复制</p>
+          <p className="paste-hint">
+            截图后 Ctrl / Cmd + V 直接粘贴;Ctrl / Cmd + S 保存;点图片放大,预览里可点按钮复制
+          </p>
         </div>
 
         {lightbox && <Lightbox url={lightbox} onClose={() => setLightbox(null)} />}
@@ -460,8 +489,8 @@ export default function TaskEditor({ task, draft, heading, onClose, onChanged }:
             type="button"
             className="primary-btn"
             onClick={() => void handleSubmit()}
-            disabled={busy}
-            title="Ctrl / Cmd + Enter"
+            disabled={!canSave}
+            title="Ctrl / Cmd + Enter 或 Ctrl / Cmd + S"
           >
             {busy ? '处理中…' : '保存'}
           </button>

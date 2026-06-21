@@ -251,6 +251,29 @@ export default function App() {
     const target = e.target instanceof HTMLElement ? e.target : null
     const isTyping = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA'
 
+    if (!isTyping && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (e.key.toLowerCase() === 'n' && isToday) {
+        e.preventDefault()
+        setEditor('create')
+        return
+      }
+      if (e.key === '[') {
+        e.preventDefault()
+        setBoardDate((date) => addDays(date, -1))
+        return
+      }
+      if (e.key === ']') {
+        e.preventDefault()
+        setBoardDate((date) => addDays(date, 1))
+        return
+      }
+      if (e.key.toLowerCase() === 't') {
+        e.preventDefault()
+        setBoardDate(today)
+        return
+      }
+    }
+
     if (e.key === '/' && !isTyping) {
       e.preventDefault()
       searchInputRef.current?.focus()
@@ -265,7 +288,7 @@ export default function App() {
       setFocusFilter('all')
       searchInputRef.current?.blur()
     }
-  }, editor === null && draftQueue.length === 0 && deleting === null && syncDraft === '' && weekReview === null)
+  }, editor === null && draftQueue.length === 0 && deleting === null && syncDraft === '' && weekReview === null && !backupOpen)
 
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]
@@ -295,18 +318,18 @@ export default function App() {
         </div>
 
         <div className="date-nav">
-          <button className="icon-btn" onClick={() => setBoardDate(addDays(boardDate, -1))} aria-label="前一天">
+          <button className="icon-btn" onClick={() => setBoardDate(addDays(boardDate, -1))} aria-label="前一天" title="[">
             ‹
           </button>
           <div className="date-label">
             <span className="date-main">{boardDate}</span>
             <span className="date-week">周{weekday}{isToday ? ' · 今天' : ''}</span>
           </div>
-          <button className="icon-btn" onClick={() => setBoardDate(addDays(boardDate, 1))} aria-label="后一天">
+          <button className="icon-btn" onClick={() => setBoardDate(addDays(boardDate, 1))} aria-label="后一天" title="]">
             ›
           </button>
           {!isToday && (
-            <button className="ghost-btn" onClick={() => setBoardDate(today)}>
+            <button className="ghost-btn" onClick={() => setBoardDate(today)} title="T">
               回到今天
             </button>
           )}
@@ -338,7 +361,7 @@ export default function App() {
             className="primary-btn"
             onClick={() => setEditor('create')}
             disabled={!isToday}
-            title={isToday ? '' : '历史面板只能查看,回到今天再新建'}
+            title={isToday ? 'N' : '历史面板只能查看,回到今天再新建'}
           >
             <span className="btn-icon" aria-hidden="true">＋</span>
             新任务
