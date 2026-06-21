@@ -46,6 +46,7 @@ export default function App() {
   const [editor, setEditor] = useState<Task | 'create' | null>(null)
   const [theme, setTheme] = useState<ThemeMode>(loadTheme)
   const [aiEnabled, setAiEnabled] = useState(false)
+  const [aiModel, setAiModel] = useState('')
   // AI 拆出来的草稿队列:逐条弹预填编辑窗,保存或放弃一条就轮到下一条
   const [draftQueue, setDraftQueue] = useState<TaskDraft[]>([])
   const [draftTotal, setDraftTotal] = useState(0)
@@ -61,12 +62,16 @@ export default function App() {
   const [weekReview, setWeekReview] = useState<WeekReview | null>(null)
   const [weekBusy, setWeekBusy] = useState(false)
   const [weekCopied, setWeekCopied] = useState(false)
+  const [backupOpen, setBackupOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // 后端配了大模型密钥才显示 AI 输入框
   useEffect(() => {
     aiStatus()
-      .then((s) => setAiEnabled(s.enabled))
+      .then((s) => {
+        setAiEnabled(s.enabled)
+        setAiModel(s.model)
+      })
       .catch(() => setAiEnabled(false))
   }, [])
 
@@ -217,8 +222,13 @@ export default function App() {
         e.preventDefault()
         void copyWeekReview()
       }
+      return
     }
-  }, deleting !== null || syncDraft !== '' || weekReview !== null)
+    if (backupOpen && e.key === 'Escape') {
+      e.preventDefault()
+      setBackupOpen(false)
+    }
+  }, deleting !== null || syncDraft !== '' || weekReview !== null || backupOpen)
 
   useDocumentEvent('keydown', (e) => {
     const target = e.target instanceof HTMLElement ? e.target : null
@@ -304,41 +314,51 @@ export default function App() {
           ))}
         </div>
 
-        <button
-          className="primary-btn"
-          onClick={() => setEditor('create')}
-          disabled={!isToday}
-          title={isToday ? '' : '历史面板只能查看,回到今天再新建'}
-        >
-          <span className="btn-icon" aria-hidden="true">＋</span>
-          新任务
-        </button>
-        <button
-          className="ghost-btn"
-          onClick={() => setSyncDraft(buildDailySync(tasks, today, weekday))}
-          disabled={!isToday}
-          title={isToday ? '' : '历史面板不生成今日同步'}
-        >
-          <span className="btn-icon" aria-hidden="true">↗</span>
-          今日同步
-        </button>
-        <button
-          className="ghost-btn"
-          onClick={() => void openWeekReview()}
-          disabled={weekBusy}
-          title="查看截至当前日期的最近 7 天回顾"
-        >
-          <span className="btn-icon" aria-hidden="true">▦</span>
-          {weekBusy ? '生成中' : '周回顾'}
-        </button>
-        <button
-          className="ghost-btn"
-          onClick={downloadBoardExport}
-          title="导出当前视图和筛选结果为 Markdown"
-        >
-          <span className="btn-icon" aria-hidden="true">↓</span>
-          {exported ? '已导出' : '导出'}
-        </button>
+        <div className="topbar-actions" aria-label="常用操作">
+          <button
+            className="primary-btn"
+            onClick={() => setEditor('create')}
+            disabled={!isToday}
+            title={isToday ? '' : '历史面板只能查看,回到今天再新建'}
+          >
+            <span className="btn-icon" aria-hidden="true">＋</span>
+            新任务
+          </button>
+          <button
+            className="ghost-btn"
+            onClick={() => setSyncDraft(buildDailySync(tasks, today, weekday))}
+            disabled={!isToday}
+            title={isToday ? '' : '历史面板不生成今日同步'}
+          >
+            <span className="btn-icon" aria-hidden="true">↗</span>
+            今日同步
+          </button>
+          <button
+            className="ghost-btn"
+            onClick={() => void openWeekReview()}
+            disabled={weekBusy}
+            title="查看截至当前日期的最近 7 天回顾"
+          >
+            <span className="btn-icon" aria-hidden="true">▦</span>
+            {weekBusy ? '生成中' : '周回顾'}
+          </button>
+          <button
+            className="ghost-btn"
+            onClick={downloadBoardExport}
+            title="导出当前视图和筛选结果为 Markdown"
+          >
+            <span className="btn-icon" aria-hidden="true">↓</span>
+            {exported ? '已导出' : '导出'}
+          </button>
+          <button
+            className="ghost-btn"
+            onClick={() => setBackupOpen(true)}
+            title="查看本机数据备份说明"
+          >
+            <span className="btn-icon" aria-hidden="true">◎</span>
+            备份
+          </button>
+        </div>
       </header>
 
       {!isToday && <div className="hint-bar">正在回顾 {boardDate} 的面板(新任务只能建在今天)</div>}
@@ -353,6 +373,7 @@ export default function App() {
 
       {aiEnabled && isToday && (
         <AiQuickAdd
+          model={aiModel}
           onDrafts={(drafts) => {
             setDraftQueue(drafts)
             setDraftTotal(drafts.length)
@@ -569,6 +590,45 @@ export default function App() {
                 {weekCopied ? '已复制' : '复制回顾'}
               </button>
               <button type="button" className="ghost-btn" onClick={() => setWeekReview(null)}>
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {backupOpen && (
+        <div className="overlay" onClick={() => setBackupOpen(false)}>
+          <div
+            className="modal backup-modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>备份说明</h2>
+            <div className="backup-grid">
+              <section>
+                <h3>本机数据</h3>
+                <p>SQLite 数据库和上传图片都在项目的 <b>data/</b> 目录。</p>
+              </section>
+              <section>
+                <h3>轻量导出</h3>
+                <p>顶部「导出」会把当前日期、视图和筛选结果保存为 Markdown。</p>
+              </section>
+              <section>
+                <h3>完整备份</h3>
+                <p>关闭服务后复制整个 <b>data/</b> 目录,能同时保留任务和图片。</p>
+              </section>
+              <section>
+                <h3>建议节奏</h3>
+                <p>日常用 Markdown 留档,每周或大改前复制一次 <b>data/</b>。</p>
+              </section>
+            </div>
+            <div className="modal-foot">
+              <button type="button" className="primary-btn" onClick={downloadBoardExport}>
+                导出当前视图
+              </button>
+              <button type="button" className="ghost-btn" onClick={() => setBackupOpen(false)}>
                 关闭
               </button>
             </div>

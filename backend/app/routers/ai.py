@@ -69,7 +69,7 @@ class TaskDraft(BaseModel):
 @router.get("/ai/status")
 async def ai_status():
     """前端用这个判断要不要显示 AI 输入框。"""
-    return {"enabled": bool(LLM_BASE_URL and LLM_API_KEY)}
+    return {"enabled": bool(LLM_BASE_URL and LLM_API_KEY), "model": CHAT_MODEL}
 
 
 @router.post("/ai/parse-task", response_model=list[TaskDraft])

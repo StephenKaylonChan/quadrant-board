@@ -72,7 +72,7 @@ export function imageUrl(img: TaskImage): string {
 // AI 返回的任务草稿,字段刚好就是建任务需要的那几个
 export type TaskDraft = TaskFields
 
-export function aiStatus(): Promise<{ enabled: boolean }> {
+export function aiStatus(): Promise<{ enabled: boolean; model: string }> {
   return request('/api/ai/status')
 }
 

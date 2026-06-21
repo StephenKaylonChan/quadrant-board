@@ -5,10 +5,11 @@ import type { TaskDraft } from '../api'
 interface Props {
   // 拆解成功后把草稿交给 App,由 App 逐条弹出预填好的编辑窗
   onDrafts: (drafts: TaskDraft[]) => void
+  model?: string
 }
 
 // AI 快捷新建:一句话 -> 草稿 -> 预填编辑窗确认后入库
-export default function AiQuickAdd({ onDrafts }: Props) {
+export default function AiQuickAdd({ onDrafts, model }: Props) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -38,6 +39,7 @@ export default function AiQuickAdd({ onDrafts }: Props) {
     <div className="ai-area">
       <div className="ai-bar">
         <span className="ai-tag">AI</span>
+        {model && <span className="ai-model">{model}</span>}
         <input
           type="text"
           className="ai-input"
