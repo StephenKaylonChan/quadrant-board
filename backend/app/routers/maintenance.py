@@ -16,6 +16,22 @@ def _folder_size(path: Path) -> int:
     return sum(item.stat().st_size for item in path.rglob("*") if item.is_file())
 
 
+def _upload_file_names(path: Path) -> set[str]:
+    return {item.name for item in path.iterdir() if item.is_file()}
+
+
+def _upload_health(upload_dir: Path, registered: set[str]) -> dict[str, object]:
+    files = _upload_file_names(upload_dir)
+    orphan = sorted(files - registered)
+    missing = sorted(registered - files)
+    return {
+        "orphan_upload_count": len(orphan),
+        "orphan_upload_samples": orphan[:5],
+        "missing_upload_count": len(missing),
+        "missing_upload_samples": missing[:5],
+    }
+
+
 @router.get("/maintenance/summary")
 async def maintenance_summary(db: AsyncSession = Depends(get_db)):
     task_total = await db.scalar(select(func.count()).select_from(Task))
@@ -24,6 +40,7 @@ async def maintenance_summary(db: AsyncSession = Depends(get_db)):
     )
     done_total = await db.scalar(select(func.count()).select_from(Task).where(Task.status == "done"))
     image_total = await db.scalar(select(func.count()).select_from(TaskImage))
+    registered_images = set(await db.scalars(select(TaskImage.filename)))
     database_file = DATA_DIR / "app.db"
 
     return {
@@ -35,4 +52,5 @@ async def maintenance_summary(db: AsyncSession = Depends(get_db)):
         "image_total": image_total or 0,
         "database_bytes": database_file.stat().st_size if database_file.exists() else 0,
         "upload_bytes": _folder_size(UPLOAD_DIR),
+        **_upload_health(UPLOAD_DIR, registered_images),
     }
