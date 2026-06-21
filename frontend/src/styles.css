@@ -1038,6 +1038,36 @@ button:focus-visible {
   font-weight: 700;
   margin: 0 0 16px;
 }
+.draft-queue-bar {
+  position: fixed;
+  left: 50%;
+  top: 18px;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 10px 8px 14px;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--modal-bg);
+  box-shadow: 0 8px 22px var(--card-shadow);
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.draft-queue-bar span,
+.draft-queue-bar b {
+  white-space: nowrap;
+}
+.draft-queue-bar b {
+  color: var(--accent-deep);
+  font-weight: 600;
+}
+.draft-queue-bar .ghost-btn {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
 
 .field {
   margin-bottom: 14px;

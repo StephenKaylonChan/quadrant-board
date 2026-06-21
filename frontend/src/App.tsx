@@ -437,6 +437,14 @@ export default function App() {
     setStatusFilter('all')
     setFocusFilter('all')
   }, [])
+  const currentDraftNumber = draftTotal - draftQueue.length + 1
+  const closeCurrentDraft = useCallback(() => {
+    setDraftQueue((prev) => prev.slice(1))
+  }, [])
+  const skipAllDrafts = useCallback(() => {
+    setDraftQueue([])
+    setDraftTotal(0)
+  }, [])
 
   return (
     <div className="app">
@@ -943,18 +951,23 @@ export default function App() {
 
       {/* AI 草稿优先弹;key 用序号,保证每条草稿都是一个全新的弹窗(状态不残留) */}
       {draftQueue.length > 0 ? (
-        <TaskEditor
-          key={`ai-draft-${draftTotal - draftQueue.length}`}
-          task={null}
-          draft={draftQueue[0]}
-          heading={
-            draftTotal > 1
-              ? `AI 草稿 ${draftTotal - draftQueue.length + 1} / ${draftTotal}`
-              : 'AI 草稿'
-          }
-          onClose={() => setDraftQueue((prev) => prev.slice(1))}
-          onChanged={load}
-        />
+        <>
+          <div className="draft-queue-bar" role="status" aria-live="polite">
+            <span>AI 草稿 {currentDraftNumber} / {draftTotal}</span>
+            <b>剩余 {draftQueue.length} 条</b>
+            <button type="button" className="ghost-btn" onClick={skipAllDrafts}>
+              跳过全部
+            </button>
+          </div>
+          <TaskEditor
+            key={`ai-draft-${draftTotal - draftQueue.length}`}
+            task={null}
+            draft={draftQueue[0]}
+            heading={draftTotal > 1 ? `AI 草稿 ${currentDraftNumber} / ${draftTotal}` : 'AI 草稿'}
+            onClose={closeCurrentDraft}
+            onChanged={load}
+          />
+        </>
       ) : (
         editor !== null && (
           <TaskEditor
