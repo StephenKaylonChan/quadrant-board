@@ -79,9 +79,9 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [] }: Pro
         <span className="ai-tag">AI</span>
         {model && <span className="ai-model">{model}</span>}
         {existingTitles.length > 0 && <span className="ai-context">参考 {existingTitles.length} 条当前任务去重</span>}
-        <input
-          type="text"
+        <textarea
           className="ai-input"
+          rows={2}
           value={text}
           onChange={(e) => {
             setText(e.target.value)
@@ -89,11 +89,14 @@ export default function AiQuickAdd({ onDrafts, model, existingTitles = [] }: Pro
             if (notice) setNotice('')
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.nativeEvent.isComposing) void parse()
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault()
+              void parse()
+            }
           }}
           disabled={busy}
           aria-label="AI 拆任务输入"
-          placeholder="一句话描述要做的事(可以一次说好几件),回车让 AI 拆好并弹出确认窗…"
+          placeholder="粘贴一段要拆的事项,Enter 拆解,Shift+Enter 换行…"
         />
         <button
           type="button"

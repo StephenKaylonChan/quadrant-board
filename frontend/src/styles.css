@@ -338,7 +338,7 @@ button:focus-visible {
 }
 .ai-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 .ai-tag {
@@ -367,6 +367,13 @@ button:focus-visible {
 .ai-bar .ai-input {
   flex: 1;
   width: auto;
+  min-height: 44px;
+  max-height: 128px;
+  line-height: 1.45;
+  resize: vertical;
+}
+.ai-bar .ghost-btn {
+  margin-top: 2px;
 }
 .ai-suggestions {
   display: flex;
@@ -1755,14 +1762,22 @@ input[type='date'] {
   .ai-bar {
     flex-wrap: wrap;
   }
+  .ai-bar .ai-input {
+    order: 4;
+    flex: 1 0 100%;
+    width: 100%;
+  }
+  .ai-bar .ghost-btn {
+    order: 5;
+    flex: 1 0 100%;
+    width: 100%;
+    margin-left: 0;
+  }
   .ai-error-row {
     flex-wrap: wrap;
   }
   .ai-error-row .ai-error {
     flex-basis: 100%;
-  }
-  .ai-bar .ai-input {
-    min-width: 0;
   }
   .ai-suggestions {
     margin-left: 0;
