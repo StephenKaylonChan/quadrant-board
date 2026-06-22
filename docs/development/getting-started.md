@@ -77,6 +77,16 @@ docker compose exec frontend npm run smoke:api
 
 `smoke:api` 会创建一个临时任务，验证健康检查、任务列表、完成日期、恢复和删除链路，结束时自动清理。它覆盖不了拖拽、粘贴图片和灯箱复制，关键交互改动仍需要手动回归。前端依赖安装在 Docker volume 内，宿主机没有 `node_modules` 时，优先在容器里跑构建验证。
 
+## 视觉调试（可选）
+
+需要让 AI 助手直接看到页面渲染、做前端视觉迭代时，可挂 Playwright MCP 让助手自主截图，免去人工逐张截图：
+
+```bash
+claude mcp add playwright -- npx -y @playwright/mcp@latest   # 一次性；装完需重启 Claude Code 工具才加载
+```
+
+截图 MUST 按浏览器真实 CSS 宽度复现：4K 显示器若是 Retina 2 倍屏，逻辑分辨率约 `1920×1080`（`system_profiler SPDisplaysDataType` 看 `UI Looks like` 那行），按 1920 宽截图才与肉眼一致；用错宽度（如 1440）会逼出额外换行、得出错误的布局结论。截图产物落在 `.playwright-mcp/`，已被 git 忽略。
+
 ## 项目结构
 
 ```text
@@ -86,7 +96,7 @@ backend/app/routers/ai.py         AI 拆任务草稿接口
 backend/app/routers/maintenance.py 数据规模统计与上传文件对账（只读）
 backend/app/orphan_uploads.py     磁盘与数据库文件对账工具
 backend/app/database.py           async SQLAlchemy 连接、建表和轻量迁移
-frontend/src/App.tsx              单屏应用状态容器
+frontend/src/App.tsx              单页应用状态容器
 frontend/src/api.ts               前端请求封装
 frontend/src/components/          四象限、散点、卡片、编辑弹窗、AI 输入、灯箱和错误边界
 frontend/src/taskViews.ts         视图切分、筛选谓词和收口建议
