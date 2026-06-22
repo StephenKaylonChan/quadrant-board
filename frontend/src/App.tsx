@@ -48,6 +48,7 @@ const THEME_KEY = 'qb-theme'
 const BOARD_VIEW_KEY = 'qb-board-view'
 const BOARD_LAYOUT_KEY = 'qb-board-layout'
 const AI_COLLAPSED_KEY = 'qb-ai-collapsed'
+const READING_MODE_KEY = 'qb-reading-mode'
 
 function loadTheme(): ThemeMode {
   const saved = localStorage.getItem(THEME_KEY)
@@ -70,6 +71,10 @@ function loadAiCollapsed(): boolean {
   return localStorage.getItem(AI_COLLAPSED_KEY) === '1'
 }
 
+function loadReadingMode(): boolean {
+  return localStorage.getItem(READING_MODE_KEY) === '1'
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -89,6 +94,7 @@ export default function App() {
   const [editor, setEditor] = useState<Task | 'create' | null>(null)
   const [theme, setTheme] = useState<ThemeMode>(loadTheme)
   const [aiCollapsed, setAiCollapsed] = useState<boolean>(loadAiCollapsed)
+  const [readingMode, setReadingMode] = useState<boolean>(loadReadingMode)
   const [aiEnabled, setAiEnabled] = useState(false)
   const [aiModel, setAiModel] = useState('')
   // AI 拆出来的草稿队列:逐条弹预填编辑窗,保存或放弃一条就轮到下一条
@@ -155,6 +161,22 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(AI_COLLAPSED_KEY, aiCollapsed ? '1' : '0')
   }, [aiCollapsed])
+
+  useEffect(() => {
+    localStorage.setItem(READING_MODE_KEY, readingMode ? '1' : '0')
+  }, [readingMode])
+
+  // 切换阅读模式:进入时顺手清掉激活的筛选。否则筛选条/统计/收口入口都被隐藏,
+  // 用户看到的是筛选后的子集却以为是完整面板,且筛选态下拖拽被禁用,容易误判"任务丢了/拖不动"。
+  const toggleReadingMode = useCallback((next: boolean) => {
+    setReadingMode(next)
+    if (next) {
+      setSearchText('')
+      setScopeFilter('all')
+      setStatusFilter('all')
+      setFocusFilter('all')
+    }
+  }, [])
 
   // 有内容要填进 AI 输入区(周回顾总结 / 当前筛选复盘)时,自动展开,避免收起状态下点了没反应
   useEffect(() => {
@@ -426,6 +448,17 @@ export default function App() {
         setBoardLayout((layout) => (layout === 'quadrant' ? 'scatter' : 'quadrant'))
         return
       }
+      // 阅读模式只对象限布局有意义,散点本就一屏概览
+      if (e.key.toLowerCase() === 'r' && boardLayout === 'quadrant') {
+        e.preventDefault()
+        toggleReadingMode(!readingMode)
+        return
+      }
+      if (e.key === 'Escape' && readingMode) {
+        e.preventDefault()
+        setReadingMode(false)
+        return
+      }
     }
 
     if (e.key === '/' && !isTyping) {
@@ -532,8 +565,10 @@ export default function App() {
     setDraftRevision((prev) => prev + 1)
   }, [draftBatchStatus, draftClearDue])
 
+  const inReadingMode = readingMode && boardLayout === 'quadrant'
+
   return (
-    <div className="app">
+    <div className={`app${inReadingMode ? ' reading-mode' : ''}`}>
       <header className="topbar">
         <div className="brand">
           <h1>每日四象限</h1>
@@ -595,6 +630,17 @@ export default function App() {
         </div>
 
         <div className="topbar-actions" aria-label="常用操作">
+          {boardLayout === 'quadrant' && (
+            <button
+              className={`ghost-btn reading-toggle${readingMode ? ' on' : ''}`}
+              onClick={() => toggleReadingMode(!readingMode)}
+              aria-pressed={readingMode}
+              title="R"
+            >
+              <span className="btn-icon" aria-hidden="true">{readingMode ? '✕' : '☷'}</span>
+              {readingMode ? '退出阅读' : '阅读'}
+            </button>
+          )}
           <button
             className="primary-btn"
             onClick={() => setEditor('create')}

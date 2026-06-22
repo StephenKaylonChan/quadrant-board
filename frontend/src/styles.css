@@ -350,6 +350,28 @@ button:focus-visible {
 .ai-zone-collapsed {
   margin-bottom: 2px;
 }
+
+/* ===== 阅读模式 ===== */
+/* 进入阅读模式时收掉所有外围 chrome,把象限内容顶到首屏 */
+.reading-toggle.on {
+  border-color: var(--accent-deep);
+  color: var(--accent-deep);
+}
+.reading-mode .ai-zone,
+.reading-mode .filter-bar,
+.reading-mode .filter-chips,
+.reading-mode .summary-strip,
+.reading-mode .focus-strip {
+  display: none;
+}
+/* 顶栏瘦身:只留日期导航和「退出阅读」按钮 */
+.reading-mode .topbar > .brand,
+.reading-mode .topbar > .seg {
+  display: none;
+}
+.reading-mode .topbar-actions > button:not(.reading-toggle) {
+  display: none;
+}
 .ai-area {
   align-self: stretch;
   padding: 8px 24px 0 34px;
