@@ -38,6 +38,7 @@ docker compose exec frontend npm run smoke:api # 基础接口冒烟检查
 
 - MUST 使用 `important + due_date` 表达四象限：上下看 `important`，左右看 `due_date 是否为空`。
 - MUST NOT 在新代码读写 `urgency / importance` 旧打分字段 — why: 旧列只为兼容老库保留，对外 API 已不暴露。
+- MUST NOT 让客户端直接设置 `last_due_date` — why: 它是后端不变式,只在 `update_task` 里 `due_date` 由非空变 `null` 时自动记原值,只读暴露;前端拖回有期限象限时按 `due_date ?? last_due_date ?? 今天` 还原。
 - MUST 保持任务不属于某一天：某天 D 的面板 = `created_date <= D 且 (completed_date 为空 或 >= D)`。
 - MUST NOT 引入每日快照表 — why: 自动结转和历史回放都依赖同一个查询语义。
 - MUST 保持 `done` 才写 `completed_date`；`review` 是待审状态，`verify` 是待真实环境验证状态，MUST 留在面板上不归档。
@@ -54,6 +55,7 @@ docker compose exec frontend npm run smoke:api # 基础接口冒烟检查
 - 删除任务 MUST 二次确认，MUST 使用 App 层 `confirm-layer`，MUST NOT 用 `window.confirm`。
 - 编辑弹窗点外部时，有未保存内容 MUST 弹「保存 / 不保存 / 继续编辑」三选一。
 - 主题 MUST 使用 CSS 变量；深色在 `[data-theme='dark']` 整组覆盖，MUST NOT 写死大面积深彩色块。
+- 阅读模式是纯 CSS 专注开关：MUST 只用 `.app` 的 `reading-mode` class 隐藏外围 chrome，MUST NOT 借它改数据或象限逻辑；只对象限布局生效，进入时 MUST 清空筛选。
 - AI 拆任务只产草稿，不直接入库；多条草稿 MUST 逐条弹预填 `TaskEditor`，保存才入库。
 - AI Prompt 标题 MUST 是 15-25 字现象列举式概括，时间点和数值细节 MUST 放入 `description`。
 

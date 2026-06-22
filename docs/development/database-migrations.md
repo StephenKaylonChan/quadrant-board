@@ -14,6 +14,7 @@
 - `sort_order`：新增浮点排序列，旧任务按 `id` 初始化。
 - `important`：从旧 `importance >= 6` 回填。
 - `due_date`：从旧 `urgency >= 6` 回填为当天，否则为空。
+- `last_due_date`：新增可空日期列，记住被清空前的截止日期；无需回填，旧行默认 `NULL`。
 
 ## 适用范围
 

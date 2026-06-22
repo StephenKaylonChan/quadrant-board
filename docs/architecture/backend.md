@@ -21,13 +21,16 @@
 当前主字段：
 - `important`：是否重要。
 - `due_date`：截止日期，`null` 表示无期限。
+- `last_due_date`：记住被清空前的截止日期，`null` 表示没有可还原的旧日期。
 - `status`：`todo / doing / review / verify / done`。
 - `sort_order`：手动排序浮点值。
 - `created_date` / `completed_date`：决定任务在哪些日期出现。
 
 旧字段 `urgency / importance` 只保留兼容老库，新代码不应读写。
 
-`init_db()` 只做轻量迁移：`create_all()` 建新表，但不会给旧表补列，所以新字段需要沿用当前 `PRAGMA table_info(tasks)` 后 `ALTER TABLE` 的模式。已有迁移包括 `sort_order`、`important` 和 `due_date`；`status`、`created_date`、`completed_date` 等早期列已经在现有库中存在。具体操作边界见 `docs/development/database-migrations.md`。
+`update_task` 维护两条字段不变式，都在 `setattr` 覆盖前读旧值：状态切到 `done` 写 `completed_date`、切回其它状态清空它；`due_date` 由非空变 `null` 时把旧值记入 `last_due_date`，供前端拖回有期限象限时还原。`last_due_date` 只在 `TaskOut` 输出、不在 `TaskUpdate` 输入，客户端无法直接设置。
+
+`init_db()` 只做轻量迁移：`create_all()` 建新表，但不会给旧表补列，所以新字段需要沿用当前 `PRAGMA table_info(tasks)` 后 `ALTER TABLE` 的模式。已有迁移包括 `sort_order`、`important`、`due_date` 和 `last_due_date`（可空、无需回填）；`status`、`created_date`、`completed_date` 等早期列已经在现有库中存在。具体操作边界见 `docs/development/database-migrations.md`。
 
 ## 每日面板查询
 
@@ -71,4 +74,4 @@ AI 接口读取 `.env` 中的大模型配置，但不能打印密钥。后端按
 
 ## 验证方式
 
-FastAPI 自动生成接口文档：`http://localhost:8000/docs`。当前没有 pytest 配置，最低验证是 `curl http://localhost:8000/api/health`。基础接口回归由 `docker compose exec frontend npm run smoke:api` 覆盖任务创建、今日列表、完成日期、恢复和删除；前端构建验证是 `docker compose exec frontend npm run build`。
+FastAPI 自动生成接口文档：`http://localhost:8000/docs`。当前没有 pytest 配置，最低验证是 `curl http://localhost:8000/api/health`。基础接口回归由 `docker compose exec frontend npm run smoke:api` 覆盖任务创建、今日列表、完成日期、恢复、清空截止日期时 `last_due_date` 的记忆，以及删除；前端构建验证是 `docker compose exec frontend npm run build`。
