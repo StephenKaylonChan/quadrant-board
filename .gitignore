@@ -23,3 +23,6 @@ CLAUDE.local.md
 
 # IDE 本地状态
 .idea/
+
+# Playwright MCP 截图调试产物(本地视觉调试用,不进 git)
+.playwright-mcp/

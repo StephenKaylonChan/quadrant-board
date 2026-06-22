@@ -47,6 +47,7 @@ const BOARD_LAYOUT_LABEL: Record<BoardLayout, string> = { quadrant: '象限', sc
 const THEME_KEY = 'qb-theme'
 const BOARD_VIEW_KEY = 'qb-board-view'
 const BOARD_LAYOUT_KEY = 'qb-board-layout'
+const AI_COLLAPSED_KEY = 'qb-ai-collapsed'
 
 function loadTheme(): ThemeMode {
   const saved = localStorage.getItem(THEME_KEY)
@@ -63,6 +64,10 @@ function loadBoardLayout(): BoardLayout {
   if (requested === 'scatter' || requested === 'quadrant') return requested
   const saved = localStorage.getItem(BOARD_LAYOUT_KEY)
   return saved === 'scatter' ? 'scatter' : 'quadrant'
+}
+
+function loadAiCollapsed(): boolean {
+  return localStorage.getItem(AI_COLLAPSED_KEY) === '1'
 }
 
 function formatBytes(bytes: number): string {
@@ -83,6 +88,7 @@ export default function App() {
   // editor 三种状态:null = 关闭,'create' = 新建,Task 对象 = 编辑该任务
   const [editor, setEditor] = useState<Task | 'create' | null>(null)
   const [theme, setTheme] = useState<ThemeMode>(loadTheme)
+  const [aiCollapsed, setAiCollapsed] = useState<boolean>(loadAiCollapsed)
   const [aiEnabled, setAiEnabled] = useState(false)
   const [aiModel, setAiModel] = useState('')
   // AI 拆出来的草稿队列:逐条弹预填编辑窗,保存或放弃一条就轮到下一条
@@ -145,6 +151,15 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(BOARD_LAYOUT_KEY, boardLayout)
   }, [boardLayout])
+
+  useEffect(() => {
+    localStorage.setItem(AI_COLLAPSED_KEY, aiCollapsed ? '1' : '0')
+  }, [aiCollapsed])
+
+  // 有内容要填进 AI 输入区(周回顾总结 / 当前筛选复盘)时,自动展开,避免收起状态下点了没反应
+  useEffect(() => {
+    if (aiPrefillPrompt) setAiCollapsed(false)
+  }, [aiPrefillPrompt])
 
   const load = useCallback(async () => {
     try {
@@ -645,18 +660,32 @@ export default function App() {
       )}
 
       {aiEnabled && isToday && (
-        <AiQuickAdd
-          model={aiModel}
-          existingTitles={aiExistingTitles}
-          reviewPrompt={aiReviewPrompt}
-          prefillPrompt={aiPrefillPrompt}
-          onDrafts={(drafts) => {
-            setDraftQueue(drafts)
-            setDraftHistory([])
-            setDraftTotal(drafts.length)
-            setDraftRevision((prev) => prev + 1)
-          }}
-        />
+        <div className={`ai-zone${aiCollapsed ? ' ai-zone-collapsed' : ''}`}>
+          <button
+            type="button"
+            className="ghost-btn ai-toggle"
+            onClick={() => setAiCollapsed((v) => !v)}
+            aria-expanded={!aiCollapsed}
+            title={aiCollapsed ? '展开 AI 拆解输入区' : '收起 AI 拆解输入区'}
+          >
+            <span className="btn-icon" aria-hidden="true">{aiCollapsed ? '＋' : '－'}</span>
+            AI 拆解
+          </button>
+          {!aiCollapsed && (
+            <AiQuickAdd
+              model={aiModel}
+              existingTitles={aiExistingTitles}
+              reviewPrompt={aiReviewPrompt}
+              prefillPrompt={aiPrefillPrompt}
+              onDrafts={(drafts) => {
+                setDraftQueue(drafts)
+                setDraftHistory([])
+                setDraftTotal(drafts.length)
+                setDraftRevision((prev) => prev + 1)
+              }}
+            />
+          )}
+        </div>
       )}
 
       <section className="filter-bar" aria-label="任务筛选">
