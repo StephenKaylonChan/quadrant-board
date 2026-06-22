@@ -8,9 +8,10 @@
 - `backend/app/` — FastAPI 后端，API 端口 8000，接口文档 http://localhost:8000/docs
 - `backend/app/routers/tasks.py` — 任务、图片接口和每日面板核心查询
 - `backend/app/routers/ai.py` — AI 拆任务草稿，调用 OpenAI 兼容接口
+- `backend/app/routers/maintenance.py` — 数据规模统计与上传文件对账，全部只读
 - `backend/app/models.py` / `schemas.py` — ORM 表结构和 API 输入输出模型
 - `frontend/src/` — React + Vite 前端，开发端口 5173
-- `frontend/src/components/` — 四象限、卡片、编辑弹窗、灯箱等组件
+- `frontend/src/components/` — 四象限、散点、卡片、编辑弹窗、灯箱、错误边界等组件
 - `data/` — SQLite 数据库和上传图片，MUST 视为运行期数据
 - `docs/` — 架构文档、路线图、Spec 和开发文档
 

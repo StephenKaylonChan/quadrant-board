@@ -7,7 +7,10 @@
 3. `get_db()` 为每个接口请求创建一个 `AsyncSession`，请求结束自动关闭。
 4. `/api/tasks` 和图片接口由 `routers/tasks.py` 提供。
 5. `/api/ai/status` 和 `/api/ai/parse-task` 由 `routers/ai.py` 提供。
-6. `/uploads` 通过 `StaticFiles` 暴露本地图片。
+6. `/api/maintenance/*` 数据自检接口由 `routers/maintenance.py` 提供。
+7. `/uploads` 通过 `StaticFiles` 暴露本地图片。
+
+`main.py` 用 `/api` 前缀注册以上三个 router。
 
 当前后端没有 Service / Repository 分层，也没有认证鉴权。业务逻辑集中在 router 内，适合这个单人本机工具；如果将来加入登录或多人同步，再拆中间层。
 
@@ -46,7 +49,21 @@ created_date <= D 且 (completed_date 为空 或 completed_date >= D)
 
 AI 接口读取 `.env` 中的大模型配置，但不能打印密钥。后端按 OpenAI 兼容 `/chat/completions` 调用，`LLM_BASE_URL` 结尾斜杠会被容错处理。AI 只返回草稿数组，字段与 `TaskCreate` 对齐：`title`、`description`、`important`、`due_date`、`status`。
 
-`SYSTEM_PROMPT` 会把“今天日期”和中文星期注入给模型，用来把“明天 / 周五前”换成具体日期。模型输出会经过 `_parse_drafts()` 容错：支持对象或数组，剥离可能的 ```json 代码块，非法日期按今天兜底，非法状态回退为 `todo`。
+`SYSTEM_PROMPT` 会把“今天日期”和中文星期注入给模型，用来把“明天 / 周五前”换成具体日期。请求体把 `temperature` 调到 `0.3`，让判断类输出更稳定，调用整体设 30 秒超时，连接或解析失败统一返回 `HTTPException(502)`。
+
+`parse-task` 还接收前端传来的 `existing_titles`（当前面板已有标题，清洗后最多 30 个），拼进用户消息作为“去重参考”，降低模型把同一件事重复拆一遍的概率。
+
+模型输出会经过 `_parse_drafts()` 多层容错：支持单对象或数组、`{"tasks": [...]}` / `{"items": [...]}` 包裹，剥离可能的 ```json 代码块，非法日期按今天兜底，非法状态回退为 `todo`，最多保留 12 条草稿（`MAX_DRAFTS`）。
+
+## 数据自检与文件对账
+
+`routers/maintenance.py` 提供三个只读接口，给本机备份前确认数据规模和文件一致性用，不改任何数据：
+
+- `GET /api/maintenance/upload-health`：对账磁盘文件与数据库记录。
+- `GET /api/maintenance/cleanup-preview`：同上并标记 `mode: dry-run`，供前端预览将清理哪些孤儿文件。
+- `GET /api/maintenance/summary`：汇总任务数、未完成 / 已完成数、图片数、数据库与上传目录占用，以及上传健康检查。
+
+对账逻辑集中在工具模块 `orphan_uploads.py`，被 router 和独立脚本共用：`orphan`（在磁盘但数据库没有）= 磁盘文件集合减去数据库登记文件名；`missing`（数据库登记但磁盘缺失）= 反向差集。它另提供 `registered_filenames_from_sqlite()` 直接用 `sqlite3` 读库，让 `scripts/cleanup_orphan_uploads.py` 这类 CLI 不必拉起 FastAPI 和 async ORM。删除孤儿文件用 `unlink(missing_ok=True)`，避免文件已不在时报错。
 
 ## 错误处理
 

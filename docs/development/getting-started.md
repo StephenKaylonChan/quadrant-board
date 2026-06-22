@@ -80,14 +80,20 @@ docker compose exec frontend npm run smoke:api
 ## 项目结构
 
 ```text
-backend/app/main.py              FastAPI 入口、路由和静态目录
-backend/app/routers/tasks.py     任务、每日面板和图片接口
-backend/app/routers/ai.py        AI 拆任务草稿接口
-backend/app/database.py          async SQLAlchemy 连接、建表和轻量迁移
-frontend/src/App.tsx             单屏应用状态容器
-frontend/src/api.ts              前端请求封装
-frontend/src/components/         四象限、卡片、编辑弹窗、AI 输入和灯箱
-frontend/src/dates.ts            本地时区日期字符串工具
-frontend/src/styles.css          全局样式和主题变量
-data/                            运行期数据库和上传图片
+backend/app/main.py               FastAPI 入口、路由和静态目录
+backend/app/routers/tasks.py      任务、每日面板和图片接口
+backend/app/routers/ai.py         AI 拆任务草稿接口
+backend/app/routers/maintenance.py 数据规模统计与上传文件对账（只读）
+backend/app/orphan_uploads.py     磁盘与数据库文件对账工具
+backend/app/database.py           async SQLAlchemy 连接、建表和轻量迁移
+frontend/src/App.tsx              单屏应用状态容器
+frontend/src/api.ts               前端请求封装
+frontend/src/components/          四象限、散点、卡片、编辑弹窗、AI 输入、灯箱和错误边界
+frontend/src/taskViews.ts         视图切分、筛选谓词和收口建议
+frontend/src/taskReview.ts        周回顾统计与提示词
+frontend/src/taskReports.ts       今日同步、导出和 AI 复盘提示词
+frontend/src/dates.ts             本地时区日期字符串工具
+frontend/src/styles.css           全局样式和主题变量
+scripts/                          备份、恢复、孤儿图片清理和本地验证脚本
+data/                             运行期数据库和上传图片
 ```
