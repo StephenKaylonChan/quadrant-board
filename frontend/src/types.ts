@@ -14,6 +14,7 @@ export interface Task {
   description: string
   important: boolean // 上下行:重要 / 不重要
   due_date: string | null // 左右列:有截止日期 / 无期限;紧急度由它推导
+  last_due_date: string | null // 被清空前的截止日期,拖回有期限象限时还原用;后端自动维护
   status: TaskStatus
   sort_order: number
   created_date: string

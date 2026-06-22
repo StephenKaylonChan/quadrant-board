@@ -71,6 +71,11 @@ async def update_task(task_id: int, payload: TaskUpdate, db: AsyncSession = Depe
         # 标记完成时记下完成日期;从"已完成"改回去时清掉(任务重新回到每天的面板)
         task.completed_date = date.today() if new_status == "done" else None
 
+    # 截止日期被清空(非空 → null,通常是拖去无期限象限)时,先把原值记下来,
+    # 这样拖回有期限象限能还原原日期,而不是退化成"今天"。注意要在下面 setattr 覆盖前读旧值。
+    if "due_date" in data and data["due_date"] is None and task.due_date is not None:
+        task.last_due_date = task.due_date
+
     for field, value in data.items():
         setattr(task, field, value)
 

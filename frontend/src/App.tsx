@@ -85,6 +85,12 @@ function uploadHealthOk(summary: MaintenanceSummary): boolean {
   return summary.orphan_upload_count === 0 && summary.missing_upload_count === 0
 }
 
+// 截止日期被清空(非空 → null)时,乐观更新也要同步记下原值,和后端 last_due_date 不变式对齐。
+// 否则乐观改完、后端 reload 返回前若再次拖回有期限象限,本地 last_due_date 还是旧值,会还原失败退回今天。
+function dueClearPatch(task: Task, nextDue: string | null): Partial<Task> {
+  return nextDue === null && task.due_date !== null ? { last_due_date: task.due_date } : {}
+}
+
 export default function App() {
   const today = todayStr()
   const [boardDate, setBoardDate] = useState(today)
@@ -200,7 +206,9 @@ export default function App() {
   // 拖拽落点:先在本地把任务挪过去(避免松手后闪回原位),再请求后端、最后以后端为准
   const moveTask = useCallback(
     async (task: Task, patch: MovePatch) => {
-      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, ...patch } : t)))
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, ...patch, ...dueClearPatch(t, patch.due_date) } : t)),
+      )
       try {
         await updateTask(task.id, patch)
       } catch (e) {
@@ -228,7 +236,9 @@ export default function App() {
 
   const changeTaskDue = useCallback(
     async (task: Task, dueDate: string | null) => {
-      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, due_date: dueDate } : t)))
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, due_date: dueDate, ...dueClearPatch(t, dueDate) } : t)),
+      )
       try {
         await updateTask(task.id, { due_date: dueDate })
       } catch (e) {

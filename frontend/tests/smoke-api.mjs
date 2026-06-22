@@ -66,6 +66,19 @@ try {
   })
   assert(restored.completed_date === null, '从已完成恢复时没有清空完成日期')
 
+  // 截止日期被清空时,后端要把原值记到 last_due_date,供拖回有期限象限时还原
+  const withDue = await request(`/tasks/${taskId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ due_date: boardDate }),
+  })
+  assert(withDue.due_date === boardDate, '设置截止日期没有生效')
+  const cleared = await request(`/tasks/${taskId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ due_date: null }),
+  })
+  assert(cleared.due_date === null, '清空截止日期没有生效')
+  assert(cleared.last_due_date === boardDate, '清空截止日期时没有记住原日期到 last_due_date')
+
   await request(`/tasks/${taskId}`, { method: 'DELETE' })
   taskId = null
 

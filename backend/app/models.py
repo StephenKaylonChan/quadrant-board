@@ -19,6 +19,10 @@ class Task(Base):
     # 紧急度不单独存——它就是"截止日期离今天多近",由前端按日期推导
     important: Mapped[bool] = mapped_column(Boolean, default=True)
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # null = 无期限
+    # 记住"被清空前的截止日期":拖去无期限象限会把 due_date 清成 null,
+    # 这一列留下原值,拖回有期限象限时据此还原,避免日期被悄悄抹掉。
+    # 由后端 update_task 在 due_date 由非空变 null 时自动写入,客户端不直接设置。
+    last_due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # 旧版的 1-10 打分,已废弃;列留着兼容老数据,新代码不要再读写
     urgency: Mapped[int] = mapped_column(Integer, default=5)

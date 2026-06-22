@@ -52,6 +52,10 @@ async def init_db() -> None:
                 {"today": date.today().isoformat()},
             )
 
+        # 记住被清空前的截止日期,供拖回有期限象限时还原(老库默认空)
+        if "last_due_date" not in columns:
+            await conn.execute(text("ALTER TABLE tasks ADD COLUMN last_due_date DATE"))
+
 
 async def get_db():
     """FastAPI 依赖:每个请求拿到一个独立的数据库会话,请求结束自动关闭。

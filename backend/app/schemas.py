@@ -53,6 +53,8 @@ class TaskOut(BaseModel):
     description: str
     important: bool
     due_date: date | None
+    # 被清空前的截止日期,供前端拖回有期限象限时还原;由后端自动维护
+    last_due_date: date | None
     status: Status
     sort_order: float
     created_date: date

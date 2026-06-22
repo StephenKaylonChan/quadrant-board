@@ -97,6 +97,11 @@ export default function QuadrantBoard({
    */
   function dropAt(q: QuadrantDef, active: Task[], index: number, anchorDue?: string | null) {
     const dragged = tasks.find((t) => t.id === draggingId)
+    // 放下后立刻清掉拖拽态:跨象限移动会销毁原卡片节点,导致它的 dragend 不再触发,
+    // 只靠 onDragEnd 清会让卡片一直留着 card-dragging 半透明卡住。
+    // 成功 drop 这条路径在此清最可靠;拖到非可放区 / 浏览器外取消时不会触发 drop,仍由 onDragEnd 兜底。
+    setDraggingId(null)
+    setOverQuad(null)
     if (!dragged) return
 
     const rest = active.filter((t) => t.id !== dragged.id)
@@ -113,13 +118,19 @@ export default function QuadrantBoard({
     let due: string | null
     if (!q.hasDue) due = null
     else if (anchorDue !== undefined) due = anchorDue
-    else due = dragged.due_date ?? todayStr()
+    // 拖回有期限象限的空白处:优先用自己现有日期,其次还原被清空前的日期,最后才退到今天
+    else due = dragged.due_date ?? dragged.last_due_date ?? todayStr()
 
     onMove(dragged, { sort_order: order, important: q.important, due_date: due })
   }
 
   function dropOnCard(q: QuadrantDef, active: Task[], card: Task, after: boolean) {
-    if (card.id === draggingId) return
+    // 拖到自己身上 = 没移动:正常浏览器会触发源节点 dragend 兜底,但这里也主动清一下,保持所有放下路径一致
+    if (card.id === draggingId) {
+      setDraggingId(null)
+      setOverQuad(null)
+      return
+    }
     const rest = active.filter((t) => t.id !== draggingId)
     const pos = rest.findIndex((t) => t.id === card.id)
     const idx = pos === -1 ? rest.length : pos + (after ? 1 : 0)
