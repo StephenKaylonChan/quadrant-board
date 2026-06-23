@@ -16,6 +16,12 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       CHAT_MODEL: ${CHAT_MODEL:-qwen-plus}
       LLM_API_KEY: ${LLM_API_KEY:-}
+      # 登录鉴权:APP_PASSWORD + SESSION_SECRET 配齐才开启;生产 .env 必须配,否则 /api 对公网裸奔。
+      # APP_USERNAME / APP_PASSWORD 只作首次种子,之后在 app 内自助改用户名/密码,以数据库为准。
+      APP_USERNAME: ${APP_USERNAME:-admin}
+      APP_PASSWORD: ${APP_PASSWORD:-}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      # 生产走 HTTPS,cookie 默认带 Secure(=1);本机 http 调试才设 0
     volumes:
       - board-data:/code/data   # SQLite + 上传图片持久化
     networks:
@@ -23,7 +29,8 @@ services:
     expose:
       - "8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/ai/status').status==200 else 1)"]
+      # 打开放的 /api/health:鉴权开启后 /api/ai/status 需登录,容器内无 cookie 会 401 误判 unhealthy
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/health').status==200 else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3

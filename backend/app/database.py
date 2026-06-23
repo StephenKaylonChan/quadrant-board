@@ -56,6 +56,30 @@ async def init_db() -> None:
         if "last_due_date" not in columns:
             await conn.execute(text("ALTER TABLE tasks ADD COLUMN last_due_date DATE"))
 
+    await _seed_credential()
+
+
+async def _seed_credential() -> None:
+    """首次启动种子:鉴权开启且库里还没凭据行时,用 env 的 APP_USERNAME/APP_PASSWORD 建初始账号。
+
+    种子只在「没有任何凭据行」时执行一次;用户之后在 app 内改了用户名/密码,
+    库里就有行了,这里直接跳过,env 不再覆盖数据库(数据库才是事实来源)。
+    """
+    from sqlalchemy import func, select
+
+    from .auth import hash_password
+    from .config import APP_PASSWORD, APP_USERNAME, AUTH_ENABLED
+    from .models import AppCredential
+
+    if not AUTH_ENABLED:
+        return
+    async with SessionLocal() as session:
+        existing = await session.scalar(select(func.count()).select_from(AppCredential))
+        if existing:
+            return
+        session.add(AppCredential(username=APP_USERNAME, password_hash=hash_password(APP_PASSWORD)))
+        await session.commit()
+
 
 async def get_db():
     """FastAPI 依赖:每个请求拿到一个独立的数据库会话,请求结束自动关闭。

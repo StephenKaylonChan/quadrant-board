@@ -12,8 +12,13 @@
 - `frontend/src/components/Lightbox.tsx` 负责图片预览，复制按钮走 `clipboard.ts`，右键保留浏览器原生菜单兜底。
 - `frontend/src/components/ErrorBoundary.tsx` 包裹应用根做渲染异常兜底。
 - `frontend/src/taskViews.ts` / `taskReview.ts` / `taskReports.ts` / `statusMeta.ts` 分别集中视图筛选与收口建议、周回顾统计、导出与同步、状态元数据等纯逻辑。
-- `frontend/src/api.ts` 是前端唯一 API 访问层，组件不直接拼后端请求。
-- `backend/app/main.py` 组装 FastAPI、CORS、路由和 `/uploads` 静态目录。
+- `frontend/src/components/LoginGate.tsx` 是开启鉴权且未登录时的登录页，拿用户名 + 密码换登录态。
+- `frontend/src/components/AccountModal.tsx` 是顶栏「账号」入口，登录后自助改用户名 / 密码（需验证当前密码）。
+- `frontend/src/api.ts` 是前端唯一 API 访问层，组件不直接拼后端请求；并统一处理 401 弹回登录页。
+- `backend/app/main.py` 组装 FastAPI、CORS、路由和 `/uploads` 静态目录，给业务路由整组挂 `require_auth` 守卫。
+- `backend/app/auth.py` 负责密码哈希/校验（标准库 pbkdf2）、签名 cookie 的签发/验证和 `require_auth` 守卫依赖。
+- `backend/app/routers/auth.py` 负责登录 / 登出 / 登录态查询 / 自助改账号；前三个不挂守卫，改账号自身挂守卫。
+- `backend/app/models.py` 的 `AppCredential` 是单行凭据表（用户名 + 哈希密码），`database.py` 在首次启动种子初始账号。
 - `backend/app/routers/tasks.py` 负责任务 CRUD、每日面板查询和图片上传删除。
 - `backend/app/routers/ai.py` 负责 AI 拆任务草稿，不写数据库。
 - `backend/app/routers/maintenance.py` 负责数据规模统计和上传文件对账，全部只读。
@@ -49,3 +54,6 @@
 - 维护接口只读：文件对账区分“孤儿文件”（磁盘有库无）和“缺失文件”（库有磁盘无），实际删除留给确认后的脚本，避免接口误删数据。
 - 图片复制优先走前端剪贴板能力：非 PNG 会先转成 PNG，灯箱打开时会预先准备可写入的 PNG；如果浏览器拒绝程序化写入，右键图片仍可使用浏览器原生复制菜单。
 - 本地数据目录是产品核心资产：备份项目时重点备份 `data/`。
+- 鉴权按环境变量在场与否自动开关：配齐 `APP_PASSWORD` + `SESSION_SECRET` 才开启，本机开发不配即免登录，生产 `.env` 必须配。登录态是无状态签名 cookie，后端不存 session 表；详见 `docs/DEPLOYMENT.md` §2。
+- 凭据「env 种子、数据库为准」：开启鉴权后首次启动用 env 的用户名/密码建初始账号写库，之后在 app 内自助改用户名/密码，库里有行就不再用 env 覆盖；忘记密码删库里 `app_credential` 行重启即重新种子。密码用 pbkdf2 加盐哈希存储，不存明文。
+- 鉴权守卫只挂在 `tasks / ai / maintenance` 三个业务路由组；`/api/health` 和 `/uploads` 静态图片不在守卫内（健康检查需公开，图片靠不可枚举的 uuid 文件名兜底），如需严格保护图片要另加中间件。

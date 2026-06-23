@@ -1929,3 +1929,95 @@ input[type='date'] {
     display: none;
   }
 }
+
+/* ===== 登录闸门:暖纸色居中卡片,和面板同一套设计语言 ===== */
+.app-booting {
+  min-height: 100vh;
+  background: var(--paper);
+}
+.login-gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--paper);
+}
+.login-card {
+  width: min(360px, 92vw);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 32px 28px;
+  box-shadow: 0 18px 50px var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: pop 0.18s ease;
+}
+.login-card h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ink);
+  text-align: center;
+}
+.login-sub {
+  margin: 0;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.login-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 15px;
+}
+.login-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.login-error {
+  margin: 0;
+  color: var(--error-fg);
+  font-size: 13px;
+  text-align: center;
+}
+.login-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+/* 账号设置弹窗:复用 .modal 外壳,纵向排列带说明的输入项 */
+.account-modal {
+  width: min(420px, 94vw);
+}
+.account-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.account-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 15px;
+}
+.account-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}

@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { aiStatus, deleteTask, fetchMaintenanceSummary, fetchTasks, updateTask } from './api'
+import {
+  aiStatus,
+  authStatus,
+  deleteTask,
+  fetchMaintenanceSummary,
+  fetchTasks,
+  logout,
+  setUnauthorizedHandler,
+  updateTask,
+} from './api'
 import type { MaintenanceSummary, TaskDraft } from './api'
+import AccountModal from './components/AccountModal'
 import AiQuickAdd from './components/AiQuickAdd'
+import LoginGate from './components/LoginGate'
 import QuadrantBoard, { type MovePatch } from './components/QuadrantBoard'
 import TaskScatter from './components/TaskScatter'
 import TaskEditor from './components/TaskEditor'
@@ -99,6 +110,12 @@ export default function App() {
   // editor 三种状态:null = 关闭,'create' = 新建,Task 对象 = 编辑该任务
   const [editor, setEditor] = useState<Task | 'create' | null>(null)
   const [theme, setTheme] = useState<ThemeMode>(loadTheme)
+  // 鉴权:authReady = 是否问过后端;requireLogin = 需要登录且未登录;authEnabled = 后端开了鉴权(决定是否显示登出)
+  const [authReady, setAuthReady] = useState(false)
+  const [requireLogin, setRequireLogin] = useState(false)
+  const [authEnabled, setAuthEnabled] = useState(false)
+  const [username, setUsername] = useState('')
+  const [accountOpen, setAccountOpen] = useState(false)
   const [aiCollapsed, setAiCollapsed] = useState<boolean>(loadAiCollapsed)
   const [readingMode, setReadingMode] = useState<boolean>(loadReadingMode)
   const [aiEnabled, setAiEnabled] = useState(false)
@@ -133,15 +150,33 @@ export default function App() {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const draftSavedRef = useRef(false)
 
-  // 后端配了大模型密钥才显示 AI 输入框
+  // 启动先确认登录态:开了鉴权且没登录就先挡在登录页。
+  // 同时注册全局 401 回调:任何请求碰到登录过期都统一弹回登录页。
   useEffect(() => {
+    setUnauthorizedHandler(() => setRequireLogin(true))
+    authStatus()
+      .then((s) => {
+        setAuthEnabled(s.auth_enabled)
+        setRequireLogin(s.auth_enabled && !s.authenticated)
+        setUsername(s.username ?? '')
+      })
+      .catch(() => {
+        // 连状态都拿不到(后端没起等),先不挡门,让后续请求的错误提示去暴露问题
+      })
+      .finally(() => setAuthReady(true))
+    return () => setUnauthorizedHandler(null)
+  }, [])
+
+  // 后端配了大模型密钥才显示 AI 输入框;同样等鉴权确认通过再问,登录后自动重问
+  useEffect(() => {
+    if (!authReady || requireLogin) return
     aiStatus()
       .then((s) => {
         setAiEnabled(s.enabled)
         setAiModel(s.model)
       })
       .catch(() => setAiEnabled(false))
-  }, [])
+  }, [authReady, requireLogin])
 
   // 主题:'system' 跟随系统设置,并监听系统切换实时跟着变
   useEffect(() => {
@@ -198,10 +233,29 @@ export default function App() {
     }
   }, [boardDate])
 
-  // boardDate 一变就重新拉当天的任务
+  // boardDate 一变就重新拉当天的任务;但要等鉴权确认通过再发,避免没登录时白发一轮 401。
+  // 登录成功后 requireLogin 翻 false 会让本 effect 重跑,自动补上首次加载。
   useEffect(() => {
+    if (!authReady || requireLogin) return
     void load()
-  }, [load])
+  }, [load, authReady, requireLogin])
+
+  // 登录成功后放行;数据和 AI 状态由各自 effect 监听 requireLogin 自动重拉。
+  // 再问一次 status 拿当前用户名(给账号弹窗显示用)。
+  const handleLoginSuccess = useCallback(() => {
+    setRequireLogin(false)
+    authStatus().then((s) => setUsername(s.username ?? '')).catch(() => {})
+  }, [])
+
+  // 登出:清登录态弹回登录页,顺手清空本地任务,避免短暂残留可见
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout()
+    } finally {
+      setRequireLogin(true)
+      setTasks([])
+    }
+  }, [])
 
   // 拖拽落点:先在本地把任务挪过去(避免松手后闪回原位),再请求后端、最后以后端为准
   const moveTask = useCallback(
@@ -416,7 +470,11 @@ export default function App() {
       e.preventDefault()
       setBackupOpen(false)
     }
-  }, deleting !== null || syncDraft !== '' || weekReview !== null || backupOpen)
+    if (accountOpen && e.key === 'Escape') {
+      e.preventDefault()
+      setAccountOpen(false)
+    }
+  }, deleting !== null || syncDraft !== '' || weekReview !== null || backupOpen || accountOpen)
 
   useDocumentEvent('keydown', (e) => {
     const target = e.target instanceof HTMLElement ? e.target : null
@@ -485,7 +543,7 @@ export default function App() {
       setFocusFilter('all')
       searchInputRef.current?.blur()
     }
-  }, editor === null && draftQueue.length === 0 && deleting === null && syncDraft === '' && weekReview === null && !backupOpen)
+  }, editor === null && draftQueue.length === 0 && deleting === null && syncDraft === '' && weekReview === null && !backupOpen && !accountOpen)
 
   const isToday = boardDate === today
   const weekday = WEEKDAYS[new Date(`${boardDate}T00:00:00`).getDay()]
@@ -576,6 +634,11 @@ export default function App() {
   }, [draftBatchStatus, draftClearDue])
 
   const inReadingMode = readingMode && boardLayout === 'quadrant'
+
+  // 鉴权闸门(所有 hooks 之后再分支,不违反 hooks 调用顺序规则):
+  // 还没问到后端登录态前先不渲染面板,避免闪一下又跳登录;需要登录就只显示登录页。
+  if (!authReady) return <div className="app-booting" aria-busy="true" />
+  if (requireLogin) return <LoginGate onSuccess={handleLoginSuccess} />
 
   return (
     <div className={`app${inReadingMode ? ' reading-mode' : ''}`}>
@@ -702,6 +765,26 @@ export default function App() {
             <span className="btn-icon" aria-hidden="true">◎</span>
             备份
           </button>
+          {authEnabled && (
+            <button
+              className="ghost-btn"
+              onClick={() => setAccountOpen(true)}
+              title={username ? `当前账号:${username}` : '账号设置'}
+            >
+              <span className="btn-icon" aria-hidden="true">◉</span>
+              {username || '账号'}
+            </button>
+          )}
+          {authEnabled && (
+            <button
+              className="ghost-btn"
+              onClick={() => void handleLogout()}
+              title="退出登录"
+            >
+              <span className="btn-icon" aria-hidden="true">⎋</span>
+              登出
+            </button>
+          )}
         </div>
       </header>
 
@@ -1116,6 +1199,14 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {accountOpen && (
+        <AccountModal
+          currentUsername={username}
+          onClose={() => setAccountOpen(false)}
+          onUpdated={(name) => setUsername(name)}
+        />
       )}
 
       {/* AI 草稿优先弹;key 用序号,保证每条草稿都是一个全新的弹窗(状态不残留) */}

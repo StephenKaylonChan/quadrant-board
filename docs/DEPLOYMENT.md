@@ -19,15 +19,30 @@
                                    └── SQLite + 上传图片（docker volume: board-data）
 ```
 
-## 2. ⚠️ 安全：鉴权尚未实现（务必尽快补）
+## 2. 安全：登录鉴权（已实现，生产必须配）
 
-**当前后端没有任何登录 / 鉴权**：所有 `/api/*` 接口对任何能访问到的人开放，可读可写整个任务板。上线时为尽快可用而暂缓鉴权，**这是已知的待办，应尽快补上**。
+**方案**：个人单用户 → 「用户名 + 密码（加盐哈希存数据库）+ 无状态签名 cookie」，不上 OAuth。
+- 凭据存数据库单行表 `app_credential`（`backend/app/models.py` 的 `AppCredential`）：用户名 + `pbkdf2_sha256` 加盐哈希密码，**不存明文**。登录后可在 app 内自助改用户名 / 密码（改密需验证当前密码）。
+- 后端 `backend/app/auth.py`：密码哈希/校验（标准库 pbkdf2，无第三方依赖）；登录态是一张只含到期时间、用 `SESSION_SECRET` 做 HMAC 签名的 cookie（`qb_session`，HttpOnly + SameSite=Lax + 生产 Secure），后端无状态、不存 session 表。
+- 守卫挂在 `app/main.py`：`tasks / ai / maintenance` 三个路由整组挂 `Depends(require_auth)`；`auth`（登录/登出/状态/改账号）和 `/api/health` 保持开放（改账号接口自身另挂守卫）。
+- 前端 `frontend/src/api.ts` + `components/LoginGate.tsx`（登录页）+ `components/AccountModal.tsx`（顶栏「账号」按钮里改用户名/密码）：启动先查 `/api/auth/status`，开了鉴权且未登录就挡在登录页；任何请求遇 401 统一弹回登录页。
 
-补登录时的关键信息（开发指引）：
-- 前端所有请求集中在 `frontend/src/api.ts` 的 `request()`——加 token / 登录态在这一处统一改即可。
-- 后端路由在 `backend/app/routers/{tasks,ai,maintenance}.py`，统一挂 `/api` 前缀（`app/main.py`）。加鉴权可用 FastAPI 依赖（`Depends`）做全局 / 路由级守卫。
-- nginx 是流量入口：在 app 内鉴权落地前，**可加一道临时 nginx Basic Auth 密码门**挡一下（见 §6 排查/运维里的说明，或让运维在 `board.conf` 的 `location /` 加 `auth_basic`）。
-- 方案选择：个人单用户 → session cookie 或单一密码 + 签名 token 即可，不必上完整 OAuth。
+**开关 + 种子逻辑（关键）**：`APP_PASSWORD` 和 `SESSION_SECRET` 两个环境变量**都配齐才开启**鉴权。
+- 开启后**首次启动**用 `APP_USERNAME`（默认 `admin`）+ `APP_PASSWORD` 建初始账号写进数据库；**之后改密以数据库为准，env 不再生效**（库里已有凭据行就跳过种子）。
+- 生产 `.env` **必须配 `APP_PASSWORD` + `SESSION_SECRET`**，否则 `/api` 对公网裸奔（后端启动会打 WARNING 日志提醒）。
+- 本机 `docker compose up`（dev）不配 = 免登录，方便开发。
+
+**生产 `.env` 配置**（与 LLM 配置放一起，仍 gitignore、仅在服务器）：
+```bash
+APP_USERNAME=你的用户名         # 可选，默认 admin
+APP_PASSWORD=初始密码           # 仅首次种子用,上线后建议进 app 改掉
+SESSION_SECRET=$(python -c "import secrets;print(secrets.token_hex(32))")  # 随机长串，务必保密
+# 改完重建后端容器：cd <BOARD_DIR> && sudo docker compose up -d --force-recreate board-backend
+```
+
+> 可选环境变量：`SESSION_MAX_AGE`（登录态有效期秒数，默认 30 天）；`COOKIE_SECURE`（默认 1=带 Secure，仅本机 http 调试才设 0）。
+> 轮换 `SESSION_SECRET` 会让所有已登录设备立即失效（需重新输密码），应急踢人可用。
+> **忘记密码**：删库里 `app_credential` 那一行再重启后端，会用 env 重新种子回初始账号。
 
 ## 3. 前置（占位符 → 真实值见私有运维记录）
 
@@ -50,7 +65,11 @@
 |------|------|-----------|
 | `backend/Dockerfile.prod` | 生产镜像（无 `--reload`、单 worker） | 本仓库 |
 | `docker-compose.prod.yml` | 后端服务（外部网络 + 数据卷 + 健康检查） | 本仓库 |
-| `.env` | LLM 配置（`LLM_BASE_URL`/`CHAT_MODEL`/`LLM_API_KEY`），**gitignore，仅放服务器** | 不进 git |
+| `.env` | LLM 配置（`LLM_BASE_URL`/`CHAT_MODEL`/`LLM_API_KEY`）+ 鉴权（`APP_PASSWORD`/`SESSION_SECRET`，见 §2），**gitignore，仅放服务器** | 不进 git |
+| `backend/app/auth.py` | 密码哈希/校验（pbkdf2）+ 签名 cookie 签发/验证 + `require_auth` 守卫 | 本仓库 |
+| `backend/app/routers/auth.py` | 登录 / 登出 / 状态 / 自助改账号接口 | 本仓库 |
+| `backend/app/models.py` `AppCredential` | 单行凭据表（用户名 + 哈希密码），`database.py` 首次启动种子 | 本仓库 |
+| `frontend/src/components/LoginGate.tsx` / `AccountModal.tsx` | 登录页 / 顶栏「账号」改用户名密码弹窗 | 本仓库 |
 | `nginx board.conf` | 静态 root + `/api`、`/uploads` 反代 | kaylonchan-website 私有 repo（`docker/nginx/conf.d/board.conf`） |
 
 ## 5. 部署 / 重新部署
@@ -122,11 +141,12 @@ ssh -i <SSH_KEY> <SSH_USER>@<SERVER> '
 ```bash
 # 健康 / 日志
 ssh -i <SSH_KEY> <SSH_USER>@<SERVER> 'sudo docker ps | grep board; sudo docker logs --tail 50 quadrant-board-backend'
-# 后端内部自测（容器内）
+# 后端内部自测（容器内）—— 打开放的 /api/health（鉴权开启后 /api/* 业务接口需登录会 401）
 ssh -i <SSH_KEY> <SSH_USER>@<SERVER> 'sudo docker exec quadrant-board-backend \
-  python -c "import urllib.request;print(urllib.request.urlopen(\"http://localhost:8000/api/ai/status\").status)"'
+  python -c "import urllib.request;print(urllib.request.urlopen(\"http://localhost:8000/api/health\").status)"'
 # 外部（本地 DNS 若被代理 fake-ip 污染，用 --resolve 指真实 IP）
-curl --resolve board.kaylonchan.com:443:<SERVER> https://board.kaylonchan.com/api/tasks?on=$(date +%F)
+# /api/health 开放;鉴权开启后 /api/tasks 等业务接口返回 401 属正常（说明守卫生效）
+curl --resolve board.kaylonchan.com:443:<SERVER> https://board.kaylonchan.com/api/health
 ```
 
 常见问题：
@@ -135,6 +155,9 @@ curl --resolve board.kaylonchan.com:443:<SERVER> https://board.kaylonchan.com/ap
 - **502 在容器重建后**：nginx 缓存了旧容器 IP → recreate nginx 或重载。
 - **镜像跑不起来 / exec format error**：镜像不是 `linux/amd64`（忘了 `--platform`）。
 - **AI 拆任务不工作**：服务器 `<BOARD_DIR>/.env` 的 `LLM_BASE_URL`/`LLM_API_KEY` 没配或失效（前端会自动隐藏 AI 入口）。
+- **打开是裸面板、没要登录**：`.env` 没配齐 `APP_PASSWORD` + `SESSION_SECRET`，鉴权没开（`docker logs` 会有「鉴权未开启」WARNING）。配齐后 `--force-recreate board-backend`。
+- **登录后立刻又被踢回登录页**：多半是 cookie 没带上——确认走 HTTPS（`COOKIE_SECURE` 默认要求 Secure），且 nginx 反代 `/api` 时没有丢 `Cookie` 头。
+- **改了 `SESSION_SECRET` 后所有人要重登**：正常，旧 cookie 的签名对不上了（也是应急踢人手段）。
 
 ## 9. 资源足迹
 

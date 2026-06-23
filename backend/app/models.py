@@ -50,6 +50,21 @@ class Task(Base):
     )
 
 
+class AppCredential(Base):
+    """登录凭据:整张表只有一行(id 固定为 1),存用户名和加盐哈希后的密码。
+
+    密码不存明文;哈希格式见 auth.py 的 hash_password。用户名 / 密码都可在 app 内自助修改。
+    """
+    __tablename__ = "app_credential"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(64))
+    password_hash: Mapped[str] = mapped_column(String(255))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+
 class TaskImage(Base):
     __tablename__ = "task_images"
 

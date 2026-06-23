@@ -1,10 +1,19 @@
 // 所有跟后端打交道的请求都集中在这个文件,组件里只调这里的函数
 import type { Task, TaskImage, TaskStatus } from './types'
 
+// 登录态过期(401)时由 App 注册一个回调,统一弹回登录页;避免每个调用点各自处理
+let onUnauthorized: (() => void) | null = null
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  onUnauthorized = handler
+}
+
 // 通用请求封装:非 2xx 一律抛错,错误信息优先用后端返回的 detail
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options)
+  // same-origin:前后端同源(生产同域名、本地走 Vite 代理),浏览器会自动带上会话 cookie
+  const res = await fetch(url, { credentials: 'same-origin', ...options })
   if (!res.ok) {
+    // 401 = 未登录或登录过期:通知 App 切回登录页,再抛错让调用方停下
+    if (res.status === 401) onUnauthorized?.()
     const body = await res.json().catch(() => null)
     const detail = body && typeof body.detail === 'string' ? body.detail : null
     throw new Error(detail ?? `请求失败(HTTP ${res.status})`)
@@ -14,6 +23,39 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
+
+// ===== 登录鉴权 =====
+
+// 启动时先问后端:是否开启了鉴权、当前登没登、当前用户名(未开启时 authenticated 恒为 true)
+export function authStatus(): Promise<{ auth_enabled: boolean; authenticated: boolean; username: string | null }> {
+  return request('/api/auth/status')
+}
+
+// 提交用户名 + 密码换登录态;成功后后端会写好会话 cookie,前端不持有任何 token
+export function login(username: string, password: string): Promise<{ ok: boolean; auth_enabled: boolean }> {
+  return request('/api/auth/login', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ username, password }),
+  })
+}
+
+export function logout(): Promise<{ ok: boolean }> {
+  return request('/api/auth/logout', { method: 'POST' })
+}
+
+// 登录后自助改用户名 / 密码:必须带当前密码,新用户名 / 新密码至少传一个
+export function updateAccount(payload: {
+  current_password: string
+  new_username?: string
+  new_password?: string
+}): Promise<{ ok: boolean; username: string }> {
+  return request('/api/auth/account', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  })
+}
 
 export interface TaskFields {
   title: string

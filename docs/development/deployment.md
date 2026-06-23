@@ -1,8 +1,10 @@
-# 部署说明
+# 本地开发部署说明
 
-## 当前部署方式
+> 📌 **本文只讲本机开发部署**。公网生产部署（board.kaylonchan.com、共享 nginx、镜像交叉构建、SSL、备份、鉴权待办）见 **[docs/DEPLOYMENT.md](../DEPLOYMENT.md)**。
 
-本项目当前定位为单人本机使用，通过 Docker Compose 本地启动，不包含公网部署流程。
+## 本机部署方式
+
+本机开发与日常使用通过 Docker Compose 本地启动；生产环境已于 2026-06-23 上线（详见上方 DEPLOYMENT.md）。
 
 GitHub 仓库：https://github.com/StephenKaylonChan/quadrant-board
 
