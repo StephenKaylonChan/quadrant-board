@@ -1,0 +1,37 @@
+# 生产部署 — 仅后端容器；前端走 vite build 静态产物，由 kaylonchan-website 的共享
+# nginx-proxy 托管（root /usr/share/nginx/html/board）。后端加入共享外部网络
+# kaylonchan_web，nginx 通过容器名 quadrant-board-backend:8000 反代 /api 与 /uploads。
+#
+# 部署（镜像本地交叉构建 amd64 → save/load，不在服务器 build，避免 OOM）：
+#   1. 本地 docker buildx build --platform linux/amd64 -t quadrant-board-backend:latest backend/ -f backend/Dockerfile.prod
+#   2. docker save | gzip → scp → 服务器 docker load
+#   3. 服务器 docker compose -f docker-compose.prod.yml up -d --no-build
+services:
+  board-backend:
+    image: quadrant-board-backend:latest
+    container_name: quadrant-board-backend
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      CHAT_MODEL: ${CHAT_MODEL:-qwen-plus}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+    volumes:
+      - board-data:/code/data   # SQLite + 上传图片持久化
+    networks:
+      - kaylonchan_web
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/ai/status').status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  kaylonchan_web:
+    external: true   # 复用 kaylonchan-website 栈的网络，nginx 才能反代到本容器
+
+volumes:
+  board-data:

@@ -1,0 +1,15 @@
+# 生产镜像 — 无 --reload、不挂载代码、单 uvicorn worker（个人单用户，省内存）
+# 部署在内存紧张的 2G ECS，与 kaylonchan-website 共用 nginx + SSL。
+FROM python:3.12-slim
+
+WORKDIR /code
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app ./app
+
+EXPOSE 8000
+
+# 单 worker：FastAPI 全异步，单 worker 的事件循环已能并发处理请求；多 worker 只是徒增内存
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
