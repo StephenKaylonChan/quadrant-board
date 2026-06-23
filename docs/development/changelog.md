@@ -58,6 +58,8 @@
 - 新增 Playwright MCP 视觉调试工作流说明,支持 AI 助手按真实分辨率自主截图迭代前端布局。
 - 新增阅读模式,可一键收起外围工具栏并瘦身顶栏,只看四象限;支持 `R` 切换、`Esc` 退出,状态持久化在 `qb-reading-mode`,进入时清空筛选,仅象限布局生效。
 - 新增 `last_due_date` 字段记住被清空前的截止日期,由后端在清空时自动维护,供拖回有期限象限时还原。
+- 新增登录鉴权:用户名 + 密码(pbkdf2 加盐哈希存数据库)+ 无状态签名 cookie,守卫挂 `tasks/ai/maintenance`,`APP_PASSWORD`+`SESSION_SECRET` 配齐才开启、首次启动用 env 种子初始账号;前端 `LoginGate` 登录页 + `AccountModal` 登录后自助改用户名 / 密码。
+- 生产 board.kaylonchan.com 启用鉴权并灌入本地真实数据;`docker-compose.prod.yml` 透传账号变量、healthcheck 改打 `/api/health`。
 
 ### Changed
 

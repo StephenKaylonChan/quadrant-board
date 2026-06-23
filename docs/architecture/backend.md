@@ -5,14 +5,15 @@
 1. FastAPI 在 `backend/app/main.py` 创建应用。
 2. `lifespan` 启动时调用 `init_db()` 建表和补列。
 3. `get_db()` 为每个接口请求创建一个 `AsyncSession`，请求结束自动关闭。
-4. `/api/tasks` 和图片接口由 `routers/tasks.py` 提供。
-5. `/api/ai/status` 和 `/api/ai/parse-task` 由 `routers/ai.py` 提供。
-6. `/api/maintenance/*` 数据自检接口由 `routers/maintenance.py` 提供。
-7. `/uploads` 通过 `StaticFiles` 暴露本地图片。
+4. `/api/auth/*` 登录鉴权接口由 `routers/auth.py` 提供。
+5. `/api/tasks` 和图片接口由 `routers/tasks.py` 提供。
+6. `/api/ai/status` 和 `/api/ai/parse-task` 由 `routers/ai.py` 提供。
+7. `/api/maintenance/*` 数据自检接口由 `routers/maintenance.py` 提供。
+8. `/uploads` 通过 `StaticFiles` 暴露本地图片。
 
-`main.py` 用 `/api` 前缀注册以上三个 router。
+`main.py` 用 `/api` 前缀注册以上四个 router；`tasks / ai / maintenance` 三组整组挂 `Depends(require_auth)` 守卫，`auth` 和 `/api/health` 保持开放。
 
-当前后端没有 Service / Repository 分层，也没有认证鉴权。业务逻辑集中在 router 内，适合这个单人本机工具；如果将来加入登录或多人同步，再拆中间层。
+当前后端没有 Service / Repository 分层，业务逻辑集中在 router 内，适合这个单人本机工具。登录鉴权见下方「登录鉴权」一节——个人单用户用「用户名 + 密码 + 签名 cookie」，不上多人同步 / OAuth。
 
 ## 数据模型
 
@@ -30,7 +31,18 @@
 
 `update_task` 维护两条字段不变式，都在 `setattr` 覆盖前读旧值：状态切到 `done` 写 `completed_date`、切回其它状态清空它；`due_date` 由非空变 `null` 时把旧值记入 `last_due_date`，供前端拖回有期限象限时还原。`last_due_date` 只在 `TaskOut` 输出、不在 `TaskUpdate` 输入，客户端无法直接设置。
 
-`init_db()` 只做轻量迁移：`create_all()` 建新表，但不会给旧表补列，所以新字段需要沿用当前 `PRAGMA table_info(tasks)` 后 `ALTER TABLE` 的模式。已有迁移包括 `sort_order`、`important`、`due_date` 和 `last_due_date`（可空、无需回填）；`status`、`created_date`、`completed_date` 等早期列已经在现有库中存在。具体操作边界见 `docs/development/database-migrations.md`。
+`init_db()` 只做轻量迁移：`create_all()` 建新表，但不会给旧表补列，所以新字段需要沿用当前 `PRAGMA table_info(tasks)` 后 `ALTER TABLE` 的模式。已有迁移包括 `sort_order`、`important`、`due_date` 和 `last_due_date`（可空、无需回填）；`status`、`created_date`、`completed_date` 等早期列已经在现有库中存在。`init_db()` 末尾还调用 `_seed_credential()` 做登录账号种子（见下）。具体操作边界见 `docs/development/database-migrations.md`。
+
+## 登录鉴权
+
+个人单用户方案：用户名 + 密码 + 无状态签名 cookie，集中在 `auth.py` 和 `routers/auth.py`。
+
+- **凭据存储**：单行表 `AppCredential`（`models.py`，固定 `id=1`）存用户名和 `pbkdf2_sha256` 加盐哈希后的密码，**不存明文**；哈希用标准库 `hashlib.pbkdf2_hmac`（20 万轮），不引第三方。
+- **开关 + 种子**：`AUTH_ENABLED = bool(APP_PASSWORD and SESSION_SECRET)`，两个 env 都配齐才开启；本机不配即免登录（启动打 WARNING）。开启后首次启动 `_seed_credential()` 用 `APP_USERNAME` / `APP_PASSWORD` 建初始账号写库，**之后以数据库为准，env 不再覆盖**（库里有行就跳过种子）。
+- **登录态**：登录成功签发 `qb_session` cookie，内容是「到期时间戳 + 用 `SESSION_SECRET` 做的 HMAC 签名」，后端无状态、不存 session 表，验票只是重算签名 + 比到期时间。cookie 属性 `HttpOnly + SameSite=Lax + 生产 Secure`。
+- **守卫**：`require_auth` 依赖只读 cookie（不查库），挂在 `tasks / ai / maintenance` 三组路由；`AUTH_ENABLED` 为假时直接放行。`/api/health`、`/uploads` 和 `auth` 路由不在守卫内（health 要公开供健康检查、uploads 靠不可枚举 uuid 文件名兜底）。
+- **接口**：`/api/auth/login`（用户名 + 密码，恒定时间比较）、`/logout`、`/status`（回带是否开启 / 是否登录 / 当前用户名）、`/account`（登录后自助改用户名 / 密码，需验证当前密码、新密码 ≥6 位，自身另挂 `require_auth`）。
+- 生产环境变量与忘记密码处理见 `docs/DEPLOYMENT.md` §2。
 
 ## 每日面板查询
 

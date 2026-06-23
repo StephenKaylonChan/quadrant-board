@@ -20,6 +20,7 @@
 - `aiEnabled` / `aiModel`：AI 是否可用及模型名，决定是否展示输入框。
 - `aiCollapsed`：AI 输入区是否收起，持久化在 `qb-ai-collapsed`；收起时只渲染一个展开开关，腾出首屏空间。
 - `readingMode`：阅读模式开关，持久化在 `qb-reading-mode`；开启后给 `.app` 挂 `reading-mode` class 隐藏外围 chrome、瘦身顶栏。只对象限布局有效（`inReadingMode = readingMode && boardLayout === 'quadrant'`），进入时由 `toggleReadingMode` 顺手清空筛选。
+- `authReady` / `requireLogin` / `authEnabled` / `username` / `accountOpen`：登录鉴权状态。启动先查 `/api/auth/status`：`authReady` 前不渲染面板，`requireLogin` 为真时只渲染 `LoginGate`（早返回在所有 hooks 之后，不违反 hooks 顺序）；`authEnabled` 决定顶栏是否显示「账号 / 登出」。初始 `load()` 和 `aiStatus()` 都用 `authReady && !requireLogin` 门控，登录成功后 `requireLogin` 翻假自动重拉，避免没登录时白发 401。
 
 状态流转原则：`App` 持有跨组件状态，子组件只通过回调上报动作；所有后端请求集中在 `api.ts`。拖拽会先更新本地 `tasks`，接口结束后再调用 `load()` 以数据库为准。
 
@@ -34,6 +35,10 @@
 - `TaskEditor`：编辑字段、图片粘贴、上传、删除、未保存关闭确认，负责新建时先暂存本地图片、保存后再上传。
 - `Lightbox`：图片预览，Esc / 点空白关闭，复制按钮走剪贴板 API，右键保留浏览器原生菜单兜底。
 - `ErrorBoundary`：包裹应用根，捕获子树渲染异常，提供“重试渲染 / 刷新页面”兜底，避免白屏。
+- `LoginGate`：开启鉴权且未登录时挡在面板前的登录页，拿用户名 + 密码调 `/api/auth/login` 换登录态。
+- `AccountModal`：顶栏「账号」按钮打开，登录后自助改用户名 / 密码，校验当前密码 + 两次新密码一致后调 `/api/auth/account`。
+
+`api.ts` 的 `request()` 统一带 `credentials: 'same-origin'`（前后端同源，浏览器自动带会话 cookie），并在收到 401 时调用注册的回调把界面弹回登录页，调用点无需各自处理登录态。
 
 ## 四象限规则
 

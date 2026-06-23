@@ -9,6 +9,7 @@
 - `backend/app/routers/tasks.py` — 任务、图片接口和每日面板核心查询
 - `backend/app/routers/ai.py` — AI 拆任务草稿，调用 OpenAI 兼容接口
 - `backend/app/routers/maintenance.py` — 数据规模统计与上传文件对账，全部只读
+- `backend/app/routers/auth.py` / `auth.py` — 登录鉴权接口与密码哈希、签名 cookie、`require_auth` 守卫
 - `backend/app/models.py` / `schemas.py` — ORM 表结构和 API 输入输出模型
 - `frontend/src/` — React + Vite 前端，开发端口 5173
 - `frontend/src/components/` — 四象限、散点、卡片、编辑弹窗、灯箱、错误边界等组件
@@ -94,6 +95,7 @@ type: feat | fix | docs | refactor | perf | test | chore
 - 图片存本地 `data/uploads/`，数据库只存文件名。
 - 前端不引入 UI 库，保持暖纸色手帐风格和轻量维护成本。
 - AI 只生成草稿，不自动入库，人工确认是数据质量边界。
+- 登录鉴权按 env 在场与否自动开关（`APP_PASSWORD`+`SESSION_SECRET` 配齐才开），本机开发免登录、生产必配；凭据加盐哈希存数据库、env 仅作首次种子，登录态是无状态签名 cookie。详见 `docs/DEPLOYMENT.md` §2。
 
 ## 引用文档
 

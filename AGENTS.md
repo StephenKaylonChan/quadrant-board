@@ -22,6 +22,7 @@
 - 编辑弹窗点外部:有未保存内容弹三选一确认(TaskEditor 的 hasUnsaved / attemptClose),别改成静默关闭或无反应。
 - 时区:容器内 TZ=Asia/Shanghai(compose 里设置),前后端的"今天"都基于本地时区;前端日期字符串用 toDateStr 手拼,禁止 toISOString(那是 UTC)。
 - async SQLAlchemy 注意:关系用了 `lazy="selectin"`;新建对象时显式传 `images=[]` 避免序列化时触发异步懒加载报错。
+- 登录鉴权:用户名+密码(pbkdf2 哈希存 `AppCredential` 单行表)+ 无状态签名 cookie,集中在 `auth.py`/`routers/auth.py`。`APP_PASSWORD`+`SESSION_SECRET` 配齐才开(本机开发免登录),首次启动用 env 种子初始账号、之后以库为准。守卫 `require_auth` 整组挂在 `tasks/ai/maintenance`,`health`/`uploads`/`auth` 开放——新增受保护路由记得在 `main.py` 挂守卫。详见 `docs/DEPLOYMENT.md` §2。
 
 ## 约定
 - 界面文案、代码注释一律中文。
